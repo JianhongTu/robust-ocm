@@ -47,6 +47,7 @@ uv pip install -e .
 robust-ocm/
 ├── pyproject.toml          # Project configuration
 ├── README.md               # This file
+├── blacklist.txt           # IDs of problematic samples (top 25% longest)
 ├── src/                    # Source code
 │   └── robust_ocm/
 │       ├── __init__.py
@@ -63,6 +64,7 @@ robust-ocm/
 │           ├── convert_to_omnidoc.py # convert-to-omnidoc CLI
 │           └── README.md          # Module documentation
 ├── scripts/                # Legacy scripts
+│   ├── batch_inference.py  # Batch OCR inference with DeepSeek-OCR
 │   └── word2png_function.py
 ├── config/                 # Configuration files
 │   ├── config_en.json
@@ -117,3 +119,42 @@ viz --input data/longbenchv2_img/line_bbox.jsonl
 # Analyze document statistics
 analyze --input data/longbenchv2_img/line_bbox.jsonl
 ```
+
+## Blacklist
+
+The `blacklist.txt` file contains IDs of problematic samples that should be skipped during processing:
+
+- **Purpose**: Contains the top 25% longest samples (125 entries) that cause rendering pipeline issues
+- **Threshold**: Samples with >112,346 words
+- **Notable problematic entry**: `6724cae7bb02136c067d79be` (954,622 words) - This particular sample causes the rendering pipeline to hang
+- **Usage**: The rendering pipeline automatically skips blacklisted IDs during processing
+
+The blacklist was created to handle extremely long documents that:
+1. Cause memory issues during rendering
+2. Lead to pipeline hangs (especially `6724cae7bb02136c067d79be`)
+3. Take excessive time to process
+
+## Batch OCR Inference
+
+For batch OCR processing using DeepSeek-OCR:
+
+```bash
+# Run batch inference with default settings
+python scripts/batch_inference.py
+
+# Override input/output paths
+python scripts/batch_inference.py --input /path/to/images --output /path/to/output
+
+# Process limited number of images
+python scripts/batch_inference.py --limit 100
+
+# Use specific GPU
+python scripts/batch_inference.py --gpu 1
+```
+
+Configuration constants in `batch_inference.py` can be modified for different model sizes:
+- **Tiny**: base_size=512, image_size=512, crop_mode=False
+- **Small**: base_size=640, image_size=640, crop_mode=False  
+- **Base**: base_size=1024, image_size=1024, crop_mode=False
+- **Large**: base_size=1280, image_size=1280, crop_mode=False
+- **Gundam**: base_size=1024, image_size=640, crop_mode=True (default)
