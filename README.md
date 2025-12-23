@@ -119,6 +119,36 @@ isort scripts/
 flake8 scripts/
 ```
 
+## Project Roadmap
+
+### Dataset Preparation
+- [x] Download LongBenchv2
+- [x] Encode LongBenchv2 into images
+- [ ] Recognize word-level and block-level bounding boxes
+- [ ] Encode into a format compatible with OmniDocBench evaluation
+- [ ] Create corruption split on both block and word levels
+
+### Inference Preparation
+- [ ] Set up those models to process vision inputs
+- [ ] Evaluate transcription accuracy with OmniDocBench
+- [ ] Evaluate QA accuracy with (maybe) LM-Eval-Harness
+
+### Experimentation
+- [ ] Set up a pipeline for inference & get scores
+- [ ] Report baseline OCR scores
+- [ ] Report OCR scores on adversarial splits
+- [ ] Report OCR scores on the corruption split
+- [ ] Report baseline QA scores
+- [ ] Report QA scores on the corruption split
+
+### Additionals
+- [ ] Text-based adversarial attack
+- [ ] Image-based adversarial attacks
+- [ ] Simple multi-agent baseline
+- [ ] Use an OCR model as context selection
+- [ ] Extract the necessary context
+- [ ] Sends to a language model to extract the final answer
+
 ## Project Structure
 
 ```
@@ -135,7 +165,3 @@ robust-ocm/
         ├── data.json
         └── STRUCTURE.md
 ```
-
-## License
-
-MIT License - see LICENSE file for details.

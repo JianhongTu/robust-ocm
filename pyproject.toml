@@ -31,7 +31,6 @@ dependencies = [
     "pdf2image>=1.16.0",
     "numpy>=1.21.0",
     "tqdm>=4.62.0",
-    "xml.sax>=0.3",
 ]
 
 [project.optional-dependencies]
