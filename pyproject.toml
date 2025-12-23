@@ -43,7 +43,10 @@ dev = [
 ]
 
 [project.scripts]
-robust-ocm-render = "word2png_function:main"
+render = "robust_ocm.render.cli:main"
+viz = "robust_ocm.render.visualize:main"
+analyze = "robust_ocm.render.analyze:main"
+convert-to-omnidoc = "robust_ocm.render.convert_to_omnidoc:main"
 
 [project.urls]
 Homepage = "https://github.com/your-org/robust-ocm"
@@ -51,7 +54,7 @@ Repository = "https://github.com/your-org/robust-ocm"
 Documentation = "https://robust-ocm.readthedocs.io"
 
 [tool.hatch.build.targets.wheel]
-packages = ["scripts"]
+packages = ["src/robust_ocm"]
 
 [tool.black]
 line-length = 88

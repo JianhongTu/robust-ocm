@@ -9,114 +9,6 @@ A toolkit for robust Optical Character Recognition (OCR) and model evaluation, d
 ```bash
 # Install the package in development mode
 uv pip install -e .
-
-# Or install with development dependencies
-uv pip install -e ".[dev]"
-```
-
-### Using pip
-
-```bash
-pip install -e .
-```
-
-## Quick Start
-
-### Render LongBench-v2 Dataset to Images
-
-```bash
-# Process all samples
-robust-ocm-render --config config/config_en.json
-
-# Process limited number of samples for testing
-robust-ocm-render --limit 10 --config config/config_en.json
-
-# Resume interrupted processing
-robust-ocm-render --recover --config config/config_en.json
-
-# Custom paths
-robust-ocm-render \
-    --data-json data/longbenchv2/data.json \
-    --config config/config_en.json \
-    --output-dir data/longbenchv2_img/images \
-    --output-jsonl data/longbenchv2_img/processed_output.jsonl \
-    --limit 100
-```
-
-### Python API
-
-```python
-from word2png_function import text_to_images, batch_process_to_images
-
-# Convert single text to images
-images = text_to_images(
-    text="Your document text here...",
-    output_dir="./output",
-    config_path="config/config_en.json",
-    unique_id="my_document"
-)
-
-# Batch process dataset
-batch_process_to_images(
-    json_path="data/longbenchv2/data.json",
-    output_dir="data/longbenchv2_img/images",
-    output_jsonl_path="data/longbenchv2_img/processed_output.jsonl",
-    config_path="config/config_en.json",
-    limit=100
-)
-```
-
-## Configuration
-
-Create a configuration file (e.g., `config/config_en.json`) with the following settings:
-
-```json
-{
-    "page-size": "595,842",
-    "dpi": 72,
-    "margin-x": 10,
-    "margin-y": 10,
-    "font-path": "/path/to/your/font.ttf",
-    "font-size": 12,
-    "line-height": 14,
-    "font-color": "#000000",
-    "alignment": "LEFT",
-    "horizontal-scale": 1.0,
-    "first-line-indent": 0,
-    "left-indent": 0,
-    "right-indent": 0,
-    "space-after": 0,
-    "space-before": 0,
-    "border-width": 0,
-    "border-padding": 0,
-    "page-bg-color": "#FFFFFF",
-    "para-bg-color": "#FFFFFF",
-    "auto-crop-width": true,
-    "auto-crop-last-page": true
-}
-```
-
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/robust-ocm.git
-cd robust-ocm
-
-# Install with uv
-uv pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Format code
-black scripts/
-isort scripts/
-
-# Lint code
-flake8 scripts/
 ```
 
 ## Project Roadmap
@@ -124,8 +16,8 @@ flake8 scripts/
 ### Dataset Preparation
 - [x] Download LongBenchv2
 - [x] Encode LongBenchv2 into images
-- [ ] Recognize word-level and block-level bounding boxes
-- [ ] Encode into a format compatible with OmniDocBench evaluation
+- [x] Recognize word-level and block-level bounding boxes
+- [x] Encode into a format compatible with OmniDocBench evaluation
 - [ ] Create corruption split on both block and word levels
 
 ### Inference Preparation
@@ -155,7 +47,22 @@ flake8 scripts/
 robust-ocm/
 ├── pyproject.toml          # Project configuration
 ├── README.md               # This file
-├── scripts/                # Source code
+├── src/                    # Source code
+│   └── robust_ocm/
+│       ├── __init__.py
+│       └── render/
+│           ├── __init__.py
+│           ├── render.py          # Main TextRenderer class
+│           ├── pdf_generator.py   # PDF generation logic
+│           ├── bbox_extractor.py  # Bounding box extraction
+│           ├── image_processor.py # Image processing
+│           ├── config.py          # Configuration management
+│           ├── cli.py             # render CLI
+│           ├── visualize.py       # viz CLI
+│           ├── analyze.py         # analyze CLI
+│           ├── convert_to_omnidoc.py # convert-to-omnidoc CLI
+│           └── README.md          # Module documentation
+├── scripts/                # Legacy scripts
 │   └── word2png_function.py
 ├── config/                 # Configuration files
 │   ├── config_en.json
@@ -164,4 +71,49 @@ robust-ocm/
     └── longbenchv2/
         ├── data.json
         └── STRUCTURE.md
+```
+
+## Usage
+
+### Converting to OmniDocBench Format
+
+To convert the line_bbox.jsonl file to OmniDocBench format for evaluation:
+
+```bash
+# Convert all documents (page 0 only)
+convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json
+
+# Convert first 100 documents, page 1 only
+convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json --limit 100 --page 1
+
+# Convert with custom page selection
+convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json --page 2
+```
+
+### Rendering Documents
+
+To render LongBench-v2 documents to images:
+
+```bash
+# Process all samples with line-level bbox extraction
+render --data-json ../data/longbenchv2/data.json
+
+# Process only 10 samples with word-level extraction
+render --limit 10 --extraction-level word
+
+# Use custom configuration
+render --config ../config/config_en.json
+
+# Resume interrupted processing
+render --recover
+```
+
+### Visualization and Analysis
+
+```bash
+# Visualize results
+viz --input data/longbenchv2_img/line_bbox.jsonl
+
+# Analyze document statistics
+analyze --input data/longbenchv2_img/line_bbox.jsonl
 ```
