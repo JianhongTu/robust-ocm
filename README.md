@@ -96,13 +96,16 @@ To render LongBench-v2 documents to images:
 
 ```bash
 # Process all samples with line-level bbox extraction
-render --data-json ../data/longbenchv2/data.json
+render --data-json ./data/longbenchv2/data.json
+
+# Skip samples listed in blacklist.txt (recommended to avoid blocking samples)
+render --blacklist ./blacklist.txt
 
 # Process only 10 samples with word-level extraction
 render --limit 10 --extraction-level word
 
 # Use custom configuration
-render --config ../config/config_en.json
+render --config ./config/config_en.json
 
 # Resume interrupted processing
 render --recover
