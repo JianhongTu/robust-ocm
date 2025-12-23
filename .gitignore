@@ -139,7 +139,6 @@ cython_debug/
 
 # Data files
 data/
-*.json
 *.jsonl
 *.csv
 *.pkl
@@ -185,7 +184,6 @@ Thumbs.db
 .uv_cache/
 
 # Font files
-*.ttf
 *.otf
 *.woff
 *.woff2
