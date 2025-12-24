@@ -46,6 +46,7 @@ dev = [
 [project.scripts]
 render = "robust_ocm.render.cli:main"
 adv-render = "robust_ocm.adv.adv_render:main"
+adv-perturb = "robust_ocm.adv.cli:main"
 viz = "robust_ocm.render.visualize:main"
 analyze = "robust_ocm.render.analyze:main"
 convert-to-omnidoc = "robust_ocm.render.convert_to_omnidoc:main"
