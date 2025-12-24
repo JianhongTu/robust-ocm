@@ -19,5 +19,6 @@
       "page-bg-color": "#FFFFFF",
       "para-bg-color": "#FFFFFF",
       "auto-crop-width": true,
-      "auto-crop-last-page": true
+      "auto-crop-last-page": true,
+      "remove-line-breaks": true
 }

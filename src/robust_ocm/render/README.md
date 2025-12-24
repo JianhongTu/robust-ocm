@@ -169,6 +169,8 @@ The render module uses JSON configuration files. Key parameters:
   - `horizontal-scale`: Horizontal scaling factor
   - `auto-crop-width`: Crop empty space on right
   - `auto-crop-last-page`: Crop empty space on last page
+  - `newline-markup`: HTML markup for newlines (default: "<br/>")
+  - `remove-line-breaks`: Remove line breaks before rendering (default: false)
 
 ## Output Format
 

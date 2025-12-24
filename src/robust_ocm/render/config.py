@@ -108,7 +108,8 @@ class Config:
             'para-bg-color': colors.HexColor('#FFFFFF'),
             'auto-crop-width': False,
             'auto-crop-last-page': False,
-            'newline-markup': '<br/>'
+            'newline-markup': '<br/>',
+            'remove-line-breaks': False
         }
     
     @staticmethod
