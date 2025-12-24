@@ -279,6 +279,27 @@ robust-render --processes 4
 ### Empty Images
 Check that the input text is not empty and the configuration is valid.
 
+## Perturbation Types
+
+The render module supports various perturbation types for robustness testing and evaluation of optical compression models. These perturbations can be applied to test model performance under different degradation conditions.
+
+### Text-based Perturbations
+
+- **Font Weight** - Vary the thickness of characters (light, normal, bold, black)
+- **Kerning Collisions** - Adjust spacing between character pairs to create visual artifacts
+- **Homoglyph Substitution** - Replace characters with visually similar ones (e.g., 'rn' → 'm', '0' → 'O')
+- **Line-Height Compression** - Reduce vertical spacing between lines to create crowding effects
+
+### Image-based Perturbations
+
+- **JPEG Compression** - Apply JPEG compression with varying quality levels to simulate lossy compression artifacts
+- **Binarization Thresholding** - Convert grayscale images to binary with different threshold values
+- **Random Noise** - Add Gaussian, salt-and-pepper, or speckle noise to images
+- **Blur** - Apply Gaussian, motion, or defocus blur with varying intensities
+- **Pixelation** - Downsample and upsample images to create blocky artifacts
+
+These perturbations can be combined and parameterized to create comprehensive test suites for evaluating model robustness across different degradation scenarios.
+
 ## Examples
 
 ### Complete Workflow
