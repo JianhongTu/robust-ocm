@@ -81,6 +81,7 @@ class PDFGenerator:
         border_padding = self.config.get('border-padding', 0)
         
         newline_markup = self.config.get('newline-markup', '<br/>')
+        remove_line_breaks = self.config.get('remove-line-breaks', False)
         
         # Create PDF in memory
         buf = io.BytesIO()
@@ -122,14 +123,29 @@ class PDFGenerator:
             return re.sub(r' {2,}', lambda m: '&nbsp;'*len(m.group()), s)
         
         text = text.replace('\xad', '').replace('\u200b', '')
-        processed_text = replace_spaces(escape(text))
-        parts = processed_text.split('\n')
+        
+        # Optionally remove line breaks before rendering
+        if remove_line_breaks:
+            # Replace newlines with spaces to remove line breaks
+            text = re.sub(r'\n+', ' ', text)  # Replace multiple newlines with single space
+            text = re.sub(r' +', ' ', text)     # Replace multiple spaces with single space
+            text = text.strip()                 # Remove leading/trailing spaces
+            parts = [text]  # Single paragraph
+        else:
+            # Keep original line breaks
+            processed_text = replace_spaces(escape(text))
+            parts = processed_text.split('\n')
         
         # Create paragraphs in batches
         story = []
         turns = 30
         for i in range(0, len(parts), turns):
-            tmp_text = newline_markup.join(parts[i:i+turns])
+            if remove_line_breaks:
+                # For single paragraph, escape and process
+                tmp_text = replace_spaces(escape(parts[i]))
+            else:
+                # Original processing with newline markup
+                tmp_text = newline_markup.join(parts[i:i+turns])
             story.append(Paragraph(tmp_text, custom))
         
         # Build PDF
