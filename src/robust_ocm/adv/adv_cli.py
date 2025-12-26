@@ -9,23 +9,29 @@ def main():
     parser = argparse.ArgumentParser(description="Generate adversarial splits by applying perturbations to images.")
     parser.add_argument('--input-dir', default='data/longbenchv2_img/images', help='Input directory containing images')
     parser.add_argument('--perturbation-type', required=True, choices=[
-        'jpeg_compression', 'binarization_thresholding', 'random_noise', 'blur', 'pixelation'
+        'jpeg_compression', 'binarization_thresholding', 'random_noise', 'blur'
     ], help='Type of perturbation to apply')
     parser.add_argument('--output-dir', help='Output directory. If not specified, uses av_{perturbation_type}/images')
     
     # Perturbation-specific parameters
-    parser.add_argument('--quality', type=int, default=50, help='Quality for JPEG compression (0-100)')
+    parser.add_argument('--quality', type=int, default=10, help='Quality for JPEG compression (0-100)')
     parser.add_argument('--threshold', type=int, default=128, help='Threshold for binarization (0-255)')
     parser.add_argument('--noise-type', default='gaussian', choices=['gaussian', 'salt_and_pepper'], help='Noise type for random noise')
-    parser.add_argument('--intensity', type=float, default=0.1, help='Intensity for random noise (0-1)')
-    parser.add_argument('--radius', type=float, default=0.5, help='Radius for Gaussian blur')
-    parser.add_argument('--pixel-size', type=int, default=10, help='Pixel size for pixelation')
+    parser.add_argument('--intensity', type=float, default=0.3, help='Intensity for random noise (0-1)')
+    parser.add_argument('--radius', type=float, default=1.25, help='Radius for Gaussian blur')
     parser.add_argument('--limit', type=int, default=None, help='Limit the number of images to process (for testing)')
     
     args = parser.parse_args()
     
     if not args.output_dir:
-        args.output_dir = f'data/av_{args.perturbation_type}/images'
+        folder_name = args.perturbation_type
+        if folder_name == 'jpeg_compression':
+            folder_name = 'jpeg'
+        elif folder_name == 'binarization_thresholding':
+            folder_name = 'binary'
+        elif folder_name == 'random_noise':
+            folder_name = 'noise'
+        args.output_dir = f'data/av_{folder_name}/images'
     
     os.makedirs(args.output_dir, exist_ok=True)
     
@@ -40,8 +46,6 @@ def main():
         params['intensity'] = args.intensity
     elif args.perturbation_type == 'blur':
         params['radius'] = args.radius
-    elif args.perturbation_type == 'pixelation':
-        params['pixel_size'] = args.pixel_size
     
     # Save metadata
     metadata = {

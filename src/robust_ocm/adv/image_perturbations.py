@@ -39,7 +39,7 @@ class RandomNoisePerturbation(Perturbation):
             raise TypeError("Data must be a PIL Image")
         img_array = np.array(data)
         if noise_type == 'gaussian':
-            noise = np.random.normal(0, intensity * 255, img_array.shape).astype(np.uint8)
+            noise = np.random.normal(0, intensity * 128, img_array.shape).astype(np.int16)
             noisy_array = np.clip(img_array.astype(np.int16) + noise, 0, 255).astype(np.uint8)
         elif noise_type == 'salt_and_pepper':
             # Salt and pepper noise
@@ -62,15 +62,3 @@ class BlurPerturbation(Perturbation):
             return data.filter(ImageFilter.GaussianBlur(radius))
         else:
             raise ValueError(f"Unsupported blur type: {blur_type}")
-
-@register_perturbation('pixelation')
-class PixelationPerturbation(Perturbation):
-    def apply(self, data, pixel_size: int = 10, **kwargs):
-        """Apply pixelation by resizing down and up."""
-        if not isinstance(data, Image.Image):
-            raise TypeError("Data must be a PIL Image")
-        width, height = data.size
-        # Resize down
-        small = data.resize((width // pixel_size, height // pixel_size), Image.NEAREST)
-        # Resize back up
-        return small.resize((width, height), Image.NEAREST)

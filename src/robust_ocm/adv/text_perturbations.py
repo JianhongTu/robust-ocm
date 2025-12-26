@@ -47,16 +47,23 @@ class FontWeightPerturbation(Perturbation):
 class KerningCollisionsPerturbation(Perturbation):
     def apply(self, data: Any, collision_factor: float = 0.1, **kwargs) -> Any:
         """
-        Apply kerning collision by modifying config.
-        This is a placeholder - ReportLab doesn't directly support kerning adjustments.
+        Apply kerning collision by reducing character spacing without changing character width.
+        This simulates true kerning where characters maintain their proportions but are placed closer together.
         """
         if not isinstance(data, dict):
             raise TypeError("Kerning perturbation requires a config dict")
         
-        # Placeholder: could adjust font size or spacing if possible
-        # For now, slightly reduce font size to simulate tighter spacing
-        if 'font-size' in data:
-            data['font-size'] = max(6, data['font-size'] * (1 - collision_factor))
+        # Calculate character spacing reduction (in points)
+        # Negative values bring characters closer together
+        font_size = data.get('font-size', 9)
+        # Typical character spacing is about 10-20% of font size
+        normal_spacing = font_size * 0.15
+        # Reduce spacing by collision_factor
+        char_spacing = -normal_spacing * collision_factor
+        
+        # Store character spacing for use in rendering
+        data['char-spacing'] = char_spacing
+        
         return data
 
 @register_perturbation('homoglyph_substitution')
@@ -132,4 +139,17 @@ class LineHeightCompressionPerturbation(Perturbation):
         elif 'font-size' in data:
             # If no explicit line-height, use font-size as base
             data['line-height'] = data['font-size'] * compression_factor
+        return data
+
+@register_perturbation('tofu')
+class TofuPerturbation(Perturbation):
+    def apply(self, data: Any, **kwargs) -> Any:
+        """
+        Apply tofu perturbation by setting font to Verdana, which may cause tofu for unsupported characters.
+        """
+        if not isinstance(data, dict):
+            raise TypeError("Tofu perturbation requires a config dict")
+        
+        # Set font-path to Verdana to potentially cause tofu rendering
+        data['font-path'] = './config/Verdana.ttf'
         return data

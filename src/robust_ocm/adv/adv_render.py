@@ -16,13 +16,26 @@ from robust_ocm.render.config import Config
 from robust_ocm.adv import apply_perturbation
 
 
+# Global variable to cache config in worker processes
+_worker_config = None
+_worker_config_path = None
+
 def adv_process_one_item(args):
     """Process single item with adversarial perturbations - optimized version"""
-    item, output_dir, config_dict, extraction_level, perturbation_type, perturbation_params = args
+    global _worker_config, _worker_config_path
+    item, output_dir, config_path, extraction_level, perturbation_type, perturbation_params = args
+    
+    # Load config only once per worker process
+    if _worker_config is None or _worker_config_path != config_path:
+        from robust_ocm.render.config import Config
+        _worker_config = Config.load_config(config_path)
+        _worker_config_path = config_path
+    
+    config_dict = _worker_config.copy()  # Make a copy to avoid modifying the cached version
     
     # Apply perturbation directly without extra function calls
     if perturbation_type:
-        if perturbation_type in ['kerning_collisions', 'line_height_compression']:
+        if perturbation_type in ['kerning_collisions', 'line_height_compression', 'tofu']:
             # These modify the config - apply once per item
             config_dict = apply_perturbation(config_dict, perturbation_type, **perturbation_params)
         elif perturbation_type in ['font_weight', 'homoglyph_substitution']:
@@ -80,7 +93,7 @@ def adv_batch_process_to_images(json_path, output_dir, output_jsonl_path,
         return
     
     # Prepare arguments for multiprocessing - simplified
-    process_args = [(item, output_dir, config, extraction_level, perturbation_type, perturbation_params or {}) for item in data_to_process]
+    process_args = [(item, output_dir, config_path, extraction_level, perturbation_type, perturbation_params or {}) for item in data_to_process]
     
     # Parallel processing with optimized chunk size
     batch_buffer = []
@@ -148,7 +161,7 @@ Examples:
                        help='Path to LongBench-v2 data.json file')
     
     parser.add_argument('--config',
-                       default='./config/config_en.json',
+                       default='./config/config_general.json',
                        help='Path to configuration file')
     
     parser.add_argument('--output-dir',
@@ -188,7 +201,7 @@ Examples:
     # Perturbation arguments
     parser.add_argument('--perturbation-type',
                        required=True,
-                       choices=['font_weight', 'kerning_collisions', 'homoglyph_substitution', 'line_height_compression'],
+                       choices=['font_weight', 'kerning_collisions', 'homoglyph_substitution', 'line_height_compression', 'tofu'],
                        help='Type of text perturbation to apply')
     
     # Perturbation parameters
@@ -222,7 +235,7 @@ Examples:
     if not args.output_dir:
         perturbation_suffix = args.perturbation_type
         if args.perturbation_type == 'font_weight':
-            perturbation_suffix = f"font_weight_{args.weight}"
+            perturbation_suffix = args.weight
         elif args.perturbation_type == 'homoglyph_substitution':
             perturbation_suffix = f"homoglyph_{args.substitution_rate}"
         elif args.perturbation_type == 'kerning_collisions':
@@ -235,14 +248,23 @@ Examples:
     
     # Load and modify config for markdown mode if needed - do this once
     config = Config.load_config(args.config)
-    if args.markdown_mode:
+    if args.markdown_mode or args.perturbation_type == 'font_weight':
         config['markdown-mode'] = True
         print("Markdown mode enabled")
     
-    # Save config to temporary file to avoid reloading
+    # Save modified config to temporary file for workers
     import tempfile
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_config:
-        json.dump(config, temp_config)
+        # Create a JSON-serializable version of the config
+        json_config = {}
+        with open(args.config, 'r', encoding='utf-8') as f:
+            json_config = json.load(f)
+        
+        # Apply markdown mode if needed
+        if args.markdown_mode or args.perturbation_type == 'font_weight':
+            json_config['markdown-mode'] = True
+        
+        json.dump(json_config, temp_config)
         temp_config_path = temp_config.name
     
     try:
