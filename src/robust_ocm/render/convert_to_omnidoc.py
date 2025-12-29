@@ -55,7 +55,7 @@ def create_layout_element(bbox_item: List[int], order: int, category_type: str =
         "text": text,
         "line_with_spans": [text_span],
         "attribute": {
-            "text_language": "text_english",  # Default to English
+            "text_language": "text_english",  # English text
             "text_background": "white",
             "text_rotate": "normal"
         }
@@ -64,13 +64,44 @@ def create_layout_element(bbox_item: List[int], order: int, category_type: str =
     return layout_element
 
 
-def convert_line_to_omnidoc(line_data: Dict[str, Any], page_idx: int = 0) -> Dict[str, Any]:
+def create_giant_bbox(page_bboxes: List[List[int]]) -> List[int]:
+    """
+    Create a single giant bounding box that encompasses all bboxes
+    
+    Args:
+        page_bboxes: List of [x1, y1, x2, y2, text] format
+        
+    Returns:
+        Single bbox [x1, y1, x2, y2, concatenated_text] with outermost coordinates
+    """
+    if not page_bboxes:
+        return [0, 0, 0, 0, ""]
+    
+    # Initialize with first bbox
+    x1_min, y1_min, x2_max, y2_max = page_bboxes[0][:4]
+    
+    # Find outermost coordinates
+    for bbox_item in page_bboxes:
+        x1, y1, x2, y2 = bbox_item[:4]
+        x1_min = min(x1_min, x1)
+        y1_min = min(y1_min, y1)
+        x2_max = max(x2_max, x2)
+        y2_max = max(y2_max, y2)
+    
+    # Concatenate all text
+    concatenated_text = " ".join(bbox_item[4] if len(bbox_item) > 4 else "" for bbox_item in page_bboxes)
+    
+    return [x1_min, y1_min, x2_max, y2_max, concatenated_text]
+
+
+def convert_line_to_omnidoc(line_data: Dict[str, Any], page_idx: int = 0, concatenate: bool = False) -> Dict[str, Any]:
     """
     Convert a single line from line_bbox.jsonl to OmniDocBench format
     
     Args:
         line_data: Dictionary with unique_id, image_paths, bboxes
         page_idx: Which page to convert (0-based)
+        concatenate: If True, create single giant bbox for all text
         
     Returns:
         Dictionary in OmniDocBench format
@@ -91,26 +122,36 @@ def convert_line_to_omnidoc(line_data: Dict[str, Any], page_idx: int = 0) -> Dic
     
     # Create layout elements
     layout_dets = []
-    for order, bbox_item in enumerate(page_bboxes, 1):
-        # Determine category type based on text content or position
-        text = bbox_item[4] if len(bbox_item) > 4 else ""
-        
-        # Simple heuristic for categorization
-        if text.isupper() and len(text) < 50:
-            category_type = "title"
-        elif text.startswith("Figure") or text.startswith("Table"):
-            category_type = "figure_caption"
-        else:
-            category_type = "text_block"
-        
-        layout_element = create_layout_element(bbox_item, order, category_type)
+    
+    if concatenate:
+        # Create single giant bbox encompassing all text
+        giant_bbox = create_giant_bbox(page_bboxes)
+        layout_element = create_layout_element(giant_bbox, order=1, category_type="text_block")
         layout_dets.append(layout_element)
+    else:
+        # Create individual layout elements for each bbox
+        for order, bbox_item in enumerate(page_bboxes, 1):
+            # Determine category type based on text content or position
+            text = bbox_item[4] if len(bbox_item) > 4 else ""
+            
+            # Simple heuristic for categorization
+            if text.isupper() and len(text) < 50:
+                category_type = "title"
+            elif text.startswith("Figure") or text.startswith("Table"):
+                category_type = "figure_caption"
+            else:
+                category_type = "text_block"
+            
+            layout_element = create_layout_element(bbox_item, order, category_type)
+            layout_dets.append(layout_element)
     
     # Create page info
     page_info = {
         "page_attribute": {
-            "scan_quality": "good",
-            "page_orientation": "portrait"
+            "data_source": "academic_literature",  # LongBench-v2 is academic literature
+            "language": "english",  # English text
+            "layout": "single_column",  # Most academic papers use single column
+            "special_issue": []  # No special issues for generated images
         },
         "page_no": page_idx + 1,
         "height": height,
@@ -133,7 +174,7 @@ def convert_line_to_omnidoc(line_data: Dict[str, Any], page_idx: int = 0) -> Dic
     return omnidoc_doc
 
 
-def convert_jsonl_to_omnidoc(input_path: str, output_path: str, limit: int = None, page_idx: int = 0):
+def convert_jsonl_to_omnidoc(input_path: str, output_path: str, limit: int = None, concatenate: bool = False):
     """
     Convert line_bbox.jsonl to OmniDocBench.json format
     
@@ -141,16 +182,18 @@ def convert_jsonl_to_omnidoc(input_path: str, output_path: str, limit: int = Non
         input_path: Path to input line_bbox.jsonl file
         output_path: Path to output OmniDocBench.json file
         limit: Maximum number of documents to convert (None for all)
-        page_idx: Which page to convert for each document (0-based)
+        concatenate: If True, create single giant bbox for all text on each page
     """
-    print(f"Converting {input_path} to {output_path}...")
+    mode_str = "concatenated (single giant bbox)" if concatenate else "individual bboxes"
+    print(f"Converting {input_path} to {output_path} (mode: {mode_str})...")
     
     omnidoc_documents = []
+    total_pages_processed = 0
     
     with open(input_path, 'r', encoding='utf-8') as f:
-        line_count = 0
+        doc_count = 0
         for line in f:
-            if limit and line_count >= limit:
+            if limit and doc_count >= limit:
                 break
                 
             line = line.strip()
@@ -159,21 +202,28 @@ def convert_jsonl_to_omnidoc(input_path: str, output_path: str, limit: int = Non
                 
             try:
                 line_data = json.loads(line)
-                omnidoc_doc = convert_line_to_omnidoc(line_data, page_idx)
-                omnidoc_documents.append(omnidoc_doc)
-                line_count += 1
+                unique_id = line_data["unique_id"]
+                bboxes = line_data["bboxes"]
                 
-                if line_count % 100 == 0:
-                    print(f"Processed {line_count} documents...")
+                # Process each page of the document
+                for page_idx in range(len(bboxes)):
+                    omnidoc_doc = convert_line_to_omnidoc(line_data, page_idx, concatenate)
+                    omnidoc_documents.append(omnidoc_doc)
+                    total_pages_processed += 1
+                
+                doc_count += 1
+                
+                if doc_count % 50 == 0:
+                    print(f"Processed {doc_count} documents ({total_pages_processed} pages total)...")
                     
             except json.JSONDecodeError as e:
-                print(f"Error parsing line {line_count}: {e}")
+                print(f"Error parsing document {doc_count}: {e}")
                 continue
             except Exception as e:
-                print(f"Error processing line {line_count}: {e}")
+                print(f"Error processing document {doc_count}: {e}")
                 continue
     
-    print(f"Converted {len(omnidoc_documents)} documents")
+    print(f"Converted {len(omnidoc_documents)} pages from {doc_count} documents")
     
     # Save to output file
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -189,11 +239,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Convert all documents, page 0 only
+    # Convert all documents with individual bboxes (default)
     python convert_to_omnidoc.py --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json
     
-    # Convert first 100 documents, page 1 only
-    python convert_to_omnidoc.py --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json --limit 100 --page 1
+    # Convert with single giant bbox per page (all text concatenated)
+    python convert_to_omnidoc.py --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_concatenated.json --concatenate
+    
+    # Convert first 100 documents with giant bbox
+    python convert_to_omnidoc.py --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_concatenated.json --concatenate --limit 100
         """
     )
     
@@ -217,10 +270,9 @@ Examples:
     )
     
     parser.add_argument(
-        '--page',
-        type=int,
-        default=0,
-        help='Page index to convert for each document (0-based, default: 0)'
+        '--concatenate',
+        action='store_true',
+        help='Concatenate all bboxes into a single giant bbox per page based on outermost coordinates'
     )
     
     args = parser.parse_args()
@@ -237,7 +289,7 @@ Examples:
     
     # Convert the file
     try:
-        convert_jsonl_to_omnidoc(args.input, args.output, args.limit, args.page)
+        convert_jsonl_to_omnidoc(args.input, args.output, args.limit, args.concatenate)
         print("Conversion completed successfully!")
         return 0
     except Exception as e:
