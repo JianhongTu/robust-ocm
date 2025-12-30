@@ -43,26 +43,73 @@ class FontWeightPerturbation(Perturbation):
         else:
             raise TypeError("Font weight perturbation requires text string or dict with 'text'/'context' key")
 
-@register_perturbation('kerning_collisions')
-class KerningCollisionsPerturbation(Perturbation):
-    def apply(self, data: Any, collision_factor: float = 0.1, **kwargs) -> Any:
+@register_perturbation('reduced_font_size')
+class ReducedFontSizePerturbation(Perturbation):
+    def apply(self, data: Any, font_size: int = 8, **kwargs) -> Any:
         """
-        Apply kerning collision by reducing character spacing without changing character width.
-        This simulates true kerning where characters maintain their proportions but are placed closer together.
+        Apply reduced font size to simulate smaller text rendering.
+        
+        This perturbation sets a specific font size directly.
+        
+        Args:
+            data: Config dictionary containing rendering settings
+            font_size: Target font size in points (default 8)
+                      Examples: 6 (very small), 8 (small), 10 (medium), 12 (large)
+        
+        Returns:
+            Modified config dictionary with specified font-size
+        
+        Note:
+            - font_size 6: Very small text
+            - font_size 8: Small text (default)
+            - font_size 10: Medium-small text
+            - font_size 12: Medium text (closer to default 11)
         """
         if not isinstance(data, dict):
-            raise TypeError("Kerning perturbation requires a config dict")
+            raise TypeError("Reduced font size perturbation requires a config dict")
         
-        # Calculate character spacing reduction (in points)
-        # Negative values bring characters closer together
-        font_size = data.get('font-size', 9)
-        # Typical character spacing is about 10-20% of font size
-        normal_spacing = font_size * 0.15
-        # Reduce spacing by collision_factor
-        char_spacing = -normal_spacing * collision_factor
+        # Ensure minimum font size to avoid rendering issues
+        if font_size < 6:
+            font_size = 6
         
-        # Store character spacing for use in rendering
-        data['char-spacing'] = char_spacing
+        # Update font size in config
+        data['font-size'] = font_size
+        
+        return data
+
+@register_perturbation('tighter_layout')
+class TighterLayoutPerturbation(Perturbation):
+    def apply(self, data: Any, line_height_factor: float = 0.8, **kwargs) -> Any:
+        """
+        Apply tighter layout by reducing line height.
+        
+        This perturbation creates a more compact text layout by reducing line height.
+        
+        Args:
+            data: Config dictionary containing rendering settings
+            line_height_factor: Line height scaling factor (default 0.8 for 80% of original)
+                                Examples: 0.5 (very tight), 0.7 (tight), 0.8 (default), 0.9 (slightly tight)
+        
+        Returns:
+            Modified config dictionary with tighter layout settings
+        
+        Note:
+            - line_height_factor 0.5: Very tight line spacing (may cause text overlap)
+            - line_height_factor 0.7: Tight line spacing
+            - line_height_factor 0.8: Tight line spacing (default)
+            - line_height_factor 0.9: Slightly tight line spacing
+        """
+        if not isinstance(data, dict):
+            raise TypeError("Tighter layout perturbation requires a config dict")
+        
+        # Get current line height
+        original_line_height = data.get('line-height', 12)
+        
+        # Calculate new line height
+        new_line_height = int(original_line_height * line_height_factor)
+        
+        # Update line height in config
+        data['line-height'] = new_line_height
         
         return data
 
@@ -152,4 +199,26 @@ class TofuPerturbation(Perturbation):
         
         # Set font-path to Verdana to potentially cause tofu rendering
         data['font-path'] = './config/Verdana.ttf'
+        return data
+
+@register_perturbation('dpi_downscale')
+class DPIDownscalePerturbation(Perturbation):
+    def apply(self, data: Any, dpi: int = 72, **kwargs) -> Any:
+        """
+        Apply DPI downscaling by modifying the config's DPI value.
+        This simulates lower resolution scans/captures at the rendering level.
+        
+        Args:
+            data: Config dictionary containing rendering settings
+            dpi: Target DPI value (default 72 for web/screen resolution)
+        
+        Returns:
+            Modified config dictionary with updated DPI
+        """
+        if not isinstance(data, dict):
+            raise TypeError("DPI downscaling perturbation requires a config dict")
+        
+        # Update the DPI value in the config
+        data['dpi'] = dpi
+        
         return data

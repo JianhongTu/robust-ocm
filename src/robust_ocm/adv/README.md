@@ -9,18 +9,16 @@ This module provides functionality to generate adversarial splits of the dataset
 
 ## TODO List of Perturbations to Implement
 
-### Text-based Perturbations (in `text_perturbations.py`)
-- [] Font Weight: Vary the font weight by switching to bold font files (implemented, requires bold font variants).
-- [] Kerning Collisions: Simulate tighter spacing by reducing font size (implemented as placeholder).
-- [] Homoglyph Substitution: Replace characters with visually similar Unicode characters.
-- [] Line-Height Compression: Reduce line spacing in rendered output.
-- [] Tofu: Force tofu rendering by using Verdana font.
+### Text-based / Config Perturbations (in `text_perturbations.py`)
+- [x] Reduced Font Size: Decrease font size to simulate smaller text rendering.
+- [x] Tighter Layout: Reduce line space to create more compact text layout.
+- [x] DPI / Resolution Downscaling: Modify rendering DPI to simulate lower resolution scans/captures.
 
 ### Image-based Perturbations (in `image_perturbations.py`)
-- [x] JPEG Compression: Apply JPEG compression artifacts at various quality levels (implemented).
-- [x] Binarization Thresholding: Convert images to binary using different thresholds (implemented).
-- [x] Random Noise: Add random noise (e.g., Gaussian, salt-and-pepper) to images (implemented).
-- [x] Blur: Apply blurring effects (e.g., Gaussian blur) with varying intensities (implemented).
+- [x] Blur: Apply blurring effects (e.g., Gaussian blur) with varying intensities.
+- [x] Binarization: Convert images to binary using thresholding.
+- [x] Lossy Encoding: Apply JPEG or WebP compression with configurable quality levels.
+- [x] Resampling Kernel: Apply different resampling filters (nearest, bilinear, bicubic, lanczos) when resizing.
 
 ## Usage
 
@@ -56,44 +54,29 @@ class NewPerturbation(Perturbation):
 
 The following commands can be used to generate adversarial splits for each implemented perturbation. Ensure you are in the project root directory and have activated the appropriate environment (e.g., `micromamba activate robust_ocm`).
 
-### Text-based Perturbations
+### Text-based / Config Perturbations
 
-- **Font Weight** (requires bold font variants):
+- **Reduced Font Size**:
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type font_weight --weight bold --output-dir data/adv_bold
+  python -m robust_ocm.adv.adv_render --perturbation-type reduced_font_size --font-size 8 --output-dir data/adv_fontsize_8
   ```
 
-- **Kerning Collisions**:
+- **Tighter Layout**:
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type kerning_collisions --collision-factor 0.1 --output-dir data/adv_kerning_collisions
+  python -m robust_ocm.adv.adv_render --perturbation-type tighter_layout --line-height-factor 0.8 --output-dir data/adv_layout_0.8
   ```
 
-- **Homoglyph Substitution**:
+- **Font Size + Layout Density**:
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type homoglyph_substitution --substitution-rate 0.3 --output-dir data/adv_homoglyph_0.3
+  python -m robust_ocm.adv.adv_render --perturbation-type font_size_density --density-factor 1.5 --output-dir data/adv_density_1.5
   ```
 
-- **Line-Height Compression**:
+- **DPI / Resolution Downscaling**:
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type line_height_compression --compression-factor 0.8 --output-dir data/adv_line_height_compression
-  ```
-
-- **Tofu**:
-  ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type tofu --output-dir data/adv_tofu
+  python -m robust_ocm.adv.adv_render --perturbation-type dpi_downscale --dpi 72 --output-dir data/adv_dpi_72
   ```
 
 ### Image-based Perturbations
-
-- **JPEG Compression**:
-  ```bash
-  python -m robust_ocm.adv.adv_cli --perturbation-type jpeg_compression --quality 10
-  ```
-
-- **Binarization Thresholding**:
-  ```bash
-  python -m robust_ocm.adv.adv_cli --perturbation-type binarization_thresholding --threshold 128
-  ```
 
 - **Random Noise**:
   ```bash
@@ -105,5 +88,66 @@ The following commands can be used to generate adversarial splits for each imple
   python -m robust_ocm.adv.adv_cli --perturbation-type blur --radius 1.25
   ```
 
-Note: Adjust parameters as needed for your use case. Use `--limit N` to process only the first N samples for testing.</content>
+- **Binarization**:
+  ```bash
+  python -m robust_ocm.adv.adv_cli --perturbation-type binarization_thresholding --threshold 128
+  ```
+
+- **Resampling Kernel**:
+  ```bash
+  python -m robust_ocm.adv.adv_cli --perturbation-type resampling_kernel --method nearest --scale 0.8
+  ```
+
+- **Lossy Encoding (JPEG)**:
+  ```bash
+  python -m robust_ocm.adv.adv_cli --perturbation-type lossy_encoding --format jpeg --quality 30
+  ```
+
+- **Lossy Encoding (WebP)**:
+  ```bash
+  python -m robust_ocm.adv.adv_cli --perturbation-type lossy_encoding --format webp --quality 40
+  ```
+
+- **Antialiasing / Hinting**:
+  ```bash
+  python -m robust_ocm.adv.adv_cli --perturbation-type antialiasing --mode none
+  ```
+
+Note: Adjust parameters as needed for your use case. Use `--limit N` to process only the first N samples for testing.
+
+## Upscaling Script
+
+The upscaling script (`scripts/upscale_images.py`) allows you to simulate the effect of capturing documents at low DPI and then upscaling to a higher DPI. This naturally introduces blur and loss of detail, simulating real-world scanning scenarios.
+
+### Usage
+
+```bash
+python scripts/upscale_images.py --input-dir <input_dir> --output-dir <output_dir> --low-dpi <low_dpi> --high-dpi <high_dpi> --method <method>
+```
+
+### Arguments
+
+- `--input-dir`: Input directory containing images
+- `--output-dir`: Output directory for upscaled images
+- `--low-dpi`: Original DPI of the images (e.g., 72)
+- `--high-dpi`: Target DPI for upscaling (e.g., 200)
+- `--method`: Upsampling method (`nearest`, `bilinear`, `bicubic`, `lanczos`)
+
+### Examples
+
+```bash
+# Upscale from 72 DPI to 200 DPI using bilinear upscaling
+python scripts/upscale_images.py --input-dir data/adv_dpi_72/images --output-dir data/adv_dpi_72_upscaled_200/images --low-dpi 72 --high-dpi 200 --method bilinear
+
+# Upscale from 48 DPI to 200 DPI using bicubic upscaling
+python scripts/upscale_images.py --input-dir data/adv_dpi_48/images --output-dir data/adv_dpi_48_upscaled_200/images --low-dpi 48 --high-dpi 200 --method bicubic
+```
+
+### How It Works
+
+The script simulates a real-world pipeline:
+1. **Downscale**: Reduces image dimensions to simulate low DPI capture
+2. **Upscale**: Resizes back to original dimensions using the specified method
+
+This naturally introduces blur and loss of detail, similar to what happens when low-quality scans are upscaled.</content>
 <parameter name="filePath">/home/jianhongtu/codes/robust_ocm/src/robust_ocm/adv/README.md

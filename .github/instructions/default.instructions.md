@@ -9,3 +9,5 @@ Environments:
 1. robust_ocm: for running the main codebase
 2. paddle: for running paddle related code (e.g., repo/paddle/bbox_cli.py)
 3. deepseek-ocr: for running deepseek related code
+
+NOTE: Always check README.md files under each folder for more specific instructions.

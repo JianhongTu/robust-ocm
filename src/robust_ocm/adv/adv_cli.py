@@ -9,16 +9,19 @@ def main():
     parser = argparse.ArgumentParser(description="Generate adversarial splits by applying perturbations to images.")
     parser.add_argument('--input-dir', default='data/longbenchv2_img/images', help='Input directory containing images')
     parser.add_argument('--perturbation-type', required=True, choices=[
-        'jpeg_compression', 'binarization_thresholding', 'random_noise', 'blur'
+        'jpeg_compression', 'webp_compression', 'lossy_encoding', 'binarization_thresholding', 'random_noise', 'blur', 'resampling_kernel'
     ], help='Type of perturbation to apply')
     parser.add_argument('--output-dir', help='Output directory. If not specified, uses av_{perturbation_type}/images')
     
     # Perturbation-specific parameters
-    parser.add_argument('--quality', type=int, default=10, help='Quality for JPEG compression (0-100)')
+    parser.add_argument('--quality', type=int, default=10, help='Quality for compression (0-100)')
+    parser.add_argument('--format', default='jpeg', choices=['jpeg', 'webp'], help='Compression format for lossy_encoding')
     parser.add_argument('--threshold', type=int, default=128, help='Threshold for binarization (0-255)')
     parser.add_argument('--noise-type', default='gaussian', choices=['gaussian', 'salt_and_pepper'], help='Noise type for random noise')
     parser.add_argument('--intensity', type=float, default=0.3, help='Intensity for random noise (0-1)')
     parser.add_argument('--radius', type=float, default=1.25, help='Radius for Gaussian blur')
+    parser.add_argument('--method', default='nearest', choices=['nearest', 'bilinear', 'bicubic', 'lanczos'], help='Resampling method for resampling_kernel')
+    parser.add_argument('--scale', type=float, default=0.8, help='Scale factor for resampling_kernel (e.g., 0.5 for 50% size)')
     parser.add_argument('--limit', type=int, default=None, help='Limit the number of images to process (for testing)')
     
     args = parser.parse_args()
@@ -27,17 +30,28 @@ def main():
         folder_name = args.perturbation_type
         if folder_name == 'jpeg_compression':
             folder_name = 'jpeg'
+        elif folder_name == 'webp_compression':
+            folder_name = 'webp'
+        elif folder_name == 'lossy_encoding':
+            folder_name = f'{args.format}_{args.quality}'
         elif folder_name == 'binarization_thresholding':
             folder_name = 'binary'
         elif folder_name == 'random_noise':
             folder_name = 'noise'
-        args.output_dir = f'data/av_{folder_name}/images'
+        elif folder_name == 'resampling_kernel':
+            folder_name = f'resample_{args.method}_{args.scale}'
+        args.output_dir = f'data/adv_{folder_name}/images'
     
     os.makedirs(args.output_dir, exist_ok=True)
     
     # Collect parameters based on perturbation type
     params = {}
     if args.perturbation_type == 'jpeg_compression':
+        params['quality'] = args.quality
+    elif args.perturbation_type == 'webp_compression':
+        params['quality'] = args.quality
+    elif args.perturbation_type == 'lossy_encoding':
+        params['format'] = args.format
         params['quality'] = args.quality
     elif args.perturbation_type == 'binarization_thresholding':
         params['threshold'] = args.threshold
@@ -46,6 +60,9 @@ def main():
         params['intensity'] = args.intensity
     elif args.perturbation_type == 'blur':
         params['radius'] = args.radius
+    elif args.perturbation_type == 'resampling_kernel':
+        params['method'] = args.method
+        params['scale'] = args.scale
     
     # Save metadata
     metadata = {

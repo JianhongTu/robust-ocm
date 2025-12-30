@@ -79,7 +79,6 @@ class PDFGenerator:
         space_after = self.config.get('space-after', 0)
         border_width = self.config.get('border-width', 0)
         border_padding = self.config.get('border-padding', 0)
-        char_spacing = self.config.get('char-spacing', 0)
         
         newline_markup = self.config.get('newline-markup', '<br/>')
         remove_line_breaks = self.config.get('remove-line-breaks', False)
@@ -118,13 +117,6 @@ class PDFGenerator:
             spaceBefore=space_before,
             spaceAfter=space_after,
         )
-        
-        # Apply character spacing using wordSpacing as approximation
-        # This is the closest ReportLab supports without custom canvas drawing
-        if char_spacing != 0:
-            # Convert character spacing to word spacing (affects spaces between words)
-            # We'll make it negative to bring words closer together
-            custom.wordSpacing = char_spacing
         
         # Process text
         def replace_spaces(s):

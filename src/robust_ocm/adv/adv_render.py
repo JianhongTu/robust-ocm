@@ -22,21 +22,14 @@ _worker_config_path = None
 
 def adv_process_one_item(args):
     """Process single item with adversarial perturbations - optimized version"""
-    global _worker_config, _worker_config_path
-    item, output_dir, config_path, extraction_level, perturbation_type, perturbation_params = args
+    item, output_dir, config_dict, extraction_level, perturbation_type, perturbation_params = args
     
-    # Load config only once per worker process
-    if _worker_config is None or _worker_config_path != config_path:
-        from robust_ocm.render.config import Config
-        _worker_config = Config.load_config(config_path)
-        _worker_config_path = config_path
-    
-    config_dict = _worker_config.copy()  # Make a copy to avoid modifying the cached version
-    
-    # Apply perturbation directly without extra function calls
+    # Apply perturbation directly to the config dict
     if perturbation_type:
-        if perturbation_type in ['kerning_collisions', 'line_height_compression', 'tofu']:
+        if perturbation_type in ['line_height_compression', 'tofu', 'dpi_downscale', 'reduced_font_size', 'tighter_layout']:
             # These modify the config - apply once per item
+            # Make a copy only when needed
+            config_dict = config_dict.copy()
             config_dict = apply_perturbation(config_dict, perturbation_type, **perturbation_params)
         elif perturbation_type in ['font_weight', 'homoglyph_substitution']:
             # These modify the text
@@ -53,7 +46,7 @@ def adv_batch_process_to_images(json_path, output_dir, output_jsonl_path,
                                blacklist_path=None, perturbation_type=None, perturbation_params=None):
     """Batch process JSON data to generate adversarial images"""
     
-    # Load configuration
+    # Load configuration ONCE before multiprocessing (like normal render)
     config = Config.load_config(config_path)
     
     print(f"Loaded config from: {config_path}")
@@ -92,8 +85,8 @@ def adv_batch_process_to_images(json_path, output_dir, output_jsonl_path,
         print("All items processed")
         return
     
-    # Prepare arguments for multiprocessing - simplified
-    process_args = [(item, output_dir, config_path, extraction_level, perturbation_type, perturbation_params or {}) for item in data_to_process]
+    # Prepare arguments for multiprocessing - pass pre-loaded config
+    process_args = [(item, output_dir, config, extraction_level, perturbation_type, perturbation_params or {}) for item in data_to_process]
     
     # Parallel processing with optimized chunk size
     batch_buffer = []
@@ -201,14 +194,16 @@ Examples:
     # Perturbation arguments
     parser.add_argument('--perturbation-type',
                        required=True,
-                       choices=['font_weight', 'kerning_collisions', 'homoglyph_substitution', 'line_height_compression', 'tofu'],
+                       choices=['font_weight', 'homoglyph_substitution', 'line_height_compression', 'tofu', 'dpi_downscale', 'reduced_font_size', 'tighter_layout'],
                        help='Type of text perturbation to apply')
     
     # Perturbation parameters
     parser.add_argument('--weight', default='bold', help='Font weight for font_weight perturbation')
-    parser.add_argument('--collision-factor', type=float, default=0.1, help='Collision factor for kerning_collisions')
     parser.add_argument('--substitution-rate', type=float, default=0.1, help='Substitution rate for homoglyph_substitution')
     parser.add_argument('--compression-factor', type=float, default=0.8, help='Compression factor for line_height_compression')
+    parser.add_argument('--dpi', type=int, default=72, help='Target DPI value for dpi_downscale perturbation (default 72)')
+    parser.add_argument('--font-size', type=int, default=8, help='Target font size for reduced_font_size perturbation (default 8 points)')
+    parser.add_argument('--line-height-factor', type=float, default=0.8, help='Line height scaling factor for tighter_layout (default 0.8 for 80% of original)')
     
     # Markdown mode
     parser.add_argument('--markdown-mode', action='store_true', help='Enable markdown parsing for rich text formatting')
@@ -238,10 +233,14 @@ Examples:
             perturbation_suffix = args.weight
         elif args.perturbation_type == 'homoglyph_substitution':
             perturbation_suffix = f"homoglyph_{args.substitution_rate}"
-        elif args.perturbation_type == 'kerning_collisions':
-            perturbation_suffix = f"kerning_{args.collision_factor}"
         elif args.perturbation_type == 'line_height_compression':
             perturbation_suffix = f"line_height_{args.compression_factor}"
+        elif args.perturbation_type == 'dpi_downscale':
+            perturbation_suffix = f"dpi_{args.dpi}"
+        elif args.perturbation_type == 'reduced_font_size':
+            perturbation_suffix = f"fontsize_{args.font_size}"
+        elif args.perturbation_type == 'tighter_layout':
+            perturbation_suffix = f"layout_{args.line_height_factor}"
         
         args.output_dir = f'./data/adv_{perturbation_suffix}/images'
         args.output_jsonl = f'./data/adv_{perturbation_suffix}/line_bbox.jsonl'
@@ -272,12 +271,16 @@ Examples:
         perturbation_params = {}
         if args.perturbation_type == 'font_weight':
             perturbation_params['weight'] = args.weight
-        elif args.perturbation_type == 'kerning_collisions':
-            perturbation_params['collision_factor'] = args.collision_factor
         elif args.perturbation_type == 'homoglyph_substitution':
             perturbation_params['substitution_rate'] = args.substitution_rate
         elif args.perturbation_type == 'line_height_compression':
             perturbation_params['compression_factor'] = args.compression_factor
+        elif args.perturbation_type == 'dpi_downscale':
+            perturbation_params['dpi'] = args.dpi
+        elif args.perturbation_type == 'reduced_font_size':
+            perturbation_params['font_size'] = args.font_size
+        elif args.perturbation_type == 'tighter_layout':
+            perturbation_params['line_height_factor'] = args.line_height_factor
         
         # Save metadata
         metadata = {

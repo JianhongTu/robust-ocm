@@ -6,7 +6,13 @@ import os
 import gc
 import numpy as np
 from PIL import Image
-from pdf2image import pdfinfo_from_bytes, convert_from_bytes
+
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    print("Warning: PyMuPDF not installed. Cannot convert PDF to images.")
+    print("Install with: pip install pymupdf")
+    fitz = None
 
 
 class ImageProcessor:
@@ -23,7 +29,7 @@ class ImageProcessor:
     
     def pdf_to_images(self, pdf_bytes, unique_id, output_dir):
         """
-        Convert PDF bytes to PNG images
+        Convert PDF bytes to PNG images using PyMuPDF
         
         Args:
             pdf_bytes: PDF file content as bytes
@@ -33,6 +39,9 @@ class ImageProcessor:
         Returns:
             list: List of generated image paths
         """
+        if fitz is None:
+            raise ImportError("PyMuPDF is required for PDF to image conversion. Install with: pip install pymupdf")
+        
         # Create output directory (flat structure)
         os.makedirs(output_dir, exist_ok=True)
         
@@ -44,39 +53,39 @@ class ImageProcessor:
         margin_x = self.config.get('margin-x', 20)
         margin_y = self.config.get('margin-y', 20)
         
-        # Convert PDF to images
-        info = pdfinfo_from_bytes(pdf_bytes)
-        num_pages = total = info["Pages"]
-        batch = 20
+        # Open PDF with PyMuPDF
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        num_pages = len(doc)
         image_paths = []
         
-        for start in range(1, total + 1, batch):
-            end = min(start + batch - 1, total)
-            images = convert_from_bytes(pdf_bytes, dpi=dpi, first_page=start, last_page=end)
-            
-            for offset, img in enumerate(images, start=start):
-                w, h = img.size
-                
-                # Horizontal scaling
-                if horizontal_scale != 1.0:
-                    img = img.resize((int(w * horizontal_scale), h))
-                
-                # Adaptive cropping
-                if auto_crop_width or (auto_crop_last_page and offset == num_pages):
-                    img = self._apply_adaptive_cropping(
-                        img, offset, num_pages, margin_x, margin_y, 
-                        auto_crop_width, auto_crop_last_page
-                    )
-                
-                # Generate representative filename
-                out_path = os.path.join(output_dir, f"{unique_id}_page_{offset:03d}.png")
-                img.save(out_path, 'PNG')
-                image_paths.append(os.path.abspath(out_path))
-                img.close()
-            
-            images.clear()
-            del images
+        # Calculate zoom factor for DPI scaling
+        # PDF default is 72 DPI, so zoom = target_dpi / 72
+        zoom = (dpi / 72.0) * horizontal_scale
+        mat = fitz.Matrix(zoom, zoom)
         
+        for page_num in range(num_pages):
+            page = doc.load_page(page_num)
+            
+            # Render page to pixmap with DPI scaling
+            pix = page.get_pixmap(matrix=mat)
+            
+            # Convert pixmap to PIL Image
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            
+            # Adaptive cropping
+            if auto_crop_width or (auto_crop_last_page and page_num + 1 == num_pages):
+                img = self._apply_adaptive_cropping(
+                    img, page_num + 1, num_pages, margin_x, margin_y,
+                    auto_crop_width, auto_crop_last_page
+                )
+            
+            # Generate representative filename
+            out_path = os.path.join(output_dir, f"{unique_id}_page_{page_num + 1:03d}.png")
+            img.save(out_path, 'PNG')
+            image_paths.append(os.path.abspath(out_path))
+            img.close()
+        
+        doc.close()
         del pdf_bytes
         gc.collect()
         
