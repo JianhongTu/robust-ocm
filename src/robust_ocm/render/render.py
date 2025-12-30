@@ -36,10 +36,7 @@ class TextRenderer:
         else:
             self.config = config_dict.copy()
             # Convert special fields if needed
-            self.config = Config.merge_configs(Config.get_default_config(), self.config)
-        
-        # Validate configuration
-        Config.validate_config(self.config)
+            Config.validate_config(self.config)
         
         # Initialize components
         self.pdf_generator = PDFGenerator(self.config)

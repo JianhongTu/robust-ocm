@@ -3,7 +3,7 @@
       "dpi": 120,
       "margin-x": 10,
       "margin-y": 10,
-      "font-path": "./config/Verdana.ttf",
+      "font-path": "./config/NotoSans.ttf",
       "font-size": 9,
       "line-height": 10,
       "font-color": "#000000",

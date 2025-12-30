@@ -48,6 +48,9 @@ class Config:
         if 'page-size' in config and isinstance(config['page-size'], str):
             config['page-size'] = tuple(map(float, config['page-size'].split(',')))
         
+        # Validate that all required fields are present and properly formatted
+        Config.validate_config(config)
+        
         return config
     
     @staticmethod
@@ -62,6 +65,7 @@ class Config:
         Returns:
             dict: Merged configuration
         """
+        # Simply merge - no defaults to fall back to
         config = {**base_config, **item_config}
         
         # Process special fields in item config
@@ -123,8 +127,13 @@ class Config:
         Raises:
             ValueError: If configuration is invalid
         """
-        if not config.get('font-path'):
-            raise ValueError("font-path must be provided in configuration")
+        # Check required fields
+        required_fields = ['font-path', 'page-size', 'font-size', 'line-height', 'margin-x', 'margin-y', 
+                          'font-color', 'alignment', 'page-bg-color', 'para-bg-color']
+        
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Required field '{field}' is missing from configuration")
         
         font_path = config['font-path']
         # Handle relative paths

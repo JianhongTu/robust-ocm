@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Extract IDs of top 25% longest samples and add to blacklist.txt
+Extract IDs of top N% longest samples and add to blacklist file
 """
 
 import json
 import os
 from pathlib import Path
 import numpy as np
+import argparse
 
 def count_words(text):
     """Count words in text, handling various delimiters"""
@@ -23,8 +24,8 @@ def count_words(text):
     
     return len(words)
 
-def extract_longest_samples(data_file, output_file='blacklist.txt'):
-    """Extract IDs of top 25% longest samples"""
+def extract_longest_samples(data_file, output_file='blacklist.txt', threshold_percent=25.0):
+    """Extract IDs of top N% longest samples"""
     print(f"Loading data from {data_file}...")
     
     with open(data_file, 'r', encoding='utf-8') as f:
@@ -59,22 +60,26 @@ def extract_longest_samples(data_file, output_file='blacklist.txt'):
     # Sort by word count (descending)
     entries_sorted = sorted(entries_with_word_counts, key=lambda x: x['word_count'], reverse=True)
     
-    # Calculate threshold for top 25%
+    # Calculate threshold for top N%
     total_entries = len(entries_sorted)
-    top_25_count = int(total_entries * 0.25)
+    top_n_count = int(total_entries * (threshold_percent / 100.0))
     
     print(f"\nTotal entries with text: {total_entries}")
-    print(f"Top 25% threshold: {top_25_count} entries")
+    print(f"Top {threshold_percent}% threshold: {top_n_count} entries")
     
-    # Get top 25% entries
-    top_25_entries = entries_sorted[:top_25_count]
+    # Get top N% entries
+    top_n_entries = entries_sorted[:top_n_count]
     
     # Calculate threshold word count
-    threshold_word_count = top_25_entries[-1]['word_count']
-    print(f"Word count threshold for top 25%: {threshold_word_count} words")
+    if top_n_entries:
+        threshold_word_count = top_n_entries[-1]['word_count']
+        print(f"Word count threshold for top {threshold_percent}%: {threshold_word_count} words")
+    else:
+        print(f"No entries found for top {threshold_percent}%")
+        return []
     
     # Extract IDs
-    top_ids = [entry['id'] for entry in top_25_entries]
+    top_ids = [entry['id'] for entry in top_n_entries]
     
     # Read existing blacklist if it exists
     existing_ids = set()
@@ -99,7 +104,7 @@ def extract_longest_samples(data_file, output_file='blacklist.txt'):
     
     # Show some statistics
     print(f"\n=== Top 10 Longest Entries ===")
-    for i, entry in enumerate(top_25_entries[:10]):
+    for i, entry in enumerate(top_n_entries[:10]):
         print(f"{i+1}. ID: {entry['id']}, Words: {entry['word_count']:,}")
     
     print(f"\n=== Sample of Newly Blacklisted IDs ===")
@@ -109,25 +114,36 @@ def extract_longest_samples(data_file, output_file='blacklist.txt'):
     return top_ids
 
 if __name__ == "__main__":
-    # Find data.json file
-    data_file = None
-    possible_paths = [
-        "data/longbenchv2/data.json",
-        "data.json",
-        "data/data.json"
-    ]
+    parser = argparse.ArgumentParser(description='Extract IDs of top N% longest samples and add to blacklist file')
+    parser.add_argument('--threshold', '-t', type=float, default=25.0,
+                       help='Percentage of longest samples to blacklist (default: 25.0)')
+    parser.add_argument('--output', '-o', type=str, default='blacklist.txt',
+                       help='Output blacklist file name (default: blacklist.txt)')
+    parser.add_argument('--data-file', '-d', type=str,
+                       help='Path to data.json file (auto-detected if not specified)')
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            data_file = path
-            break
+    args = parser.parse_args()
+    
+    # Find data.json file if not specified
+    data_file = args.data_file
+    if not data_file:
+        possible_paths = [
+            "data/longbenchv2/data.json",
+            "data.json",
+            "data/data.json"
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                data_file = path
+                break
     
     if not data_file:
         print("Error: Could not find data.json file")
-        print("Please ensure data.json is in one of these locations:")
+        print("Please specify with --data-file or ensure data.json is in one of these locations:")
         for path in possible_paths:
             print(f"  - {path}")
         exit(1)
     
-    # Run extraction
-    extract_longest_samples(data_file)
+    # Run extraction with specified parameters
+    extract_longest_samples(data_file, args.output, args.threshold)

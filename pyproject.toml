@@ -31,6 +31,11 @@ dependencies = [
     "pdf2image>=1.16.0",
     "numpy>=1.21.0",
     "tqdm>=4.62.0",
+    "markdown>=3.4.0",
+    "Levenshtein>=0.20.0",
+    "sacrebleu>=2.3.0",
+    "beautifulsoup4>=4.11.0",
+    "pylatexenc>=2.10.0",
 ]
 
 [project.optional-dependencies]
@@ -44,9 +49,12 @@ dev = [
 
 [project.scripts]
 render = "robust_ocm.render.cli:main"
+adv-render = "robust_ocm.adv.adv_render:main"
+adv-perturb = "robust_ocm.adv.cli:main"
 viz = "robust_ocm.render.visualize:main"
 analyze = "robust_ocm.render.analyze:main"
-convert-to-omnidoc = "robust_ocm.render.convert_to_omnidoc:main"
+convert = "robust_ocm.render.convert_to_omnidoc:main"
+eval = "robust_ocm.eval.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/your-org/robust-ocm"

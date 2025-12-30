@@ -209,7 +209,7 @@ Examples:
   robust-ocm-render --limit 10 --extraction-level word
   
   # Use custom configuration
-  robust-ocm-render --config ../config/config_en.json
+  robust-ocm-render --config ../config/config_general.json
   
   # Resume interrupted processing
   robust-ocm-render --recover
@@ -221,7 +221,7 @@ Examples:
                        help='Path to LongBench-v2 data.json file')
     
     parser.add_argument('--config',
-                       default='./config/config_en.json',
+                       default='./config/config_general.json',
                        help='Path to configuration file')
     
     parser.add_argument('--output-dir',
