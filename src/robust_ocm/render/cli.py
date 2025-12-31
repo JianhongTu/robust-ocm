@@ -286,20 +286,23 @@ Examples:
     
     # Modify default output paths if task is specified
     if args.task:
-        # Insert task subfolder into output paths
+        # Insert task subfolder into output paths after data/
         output_dir_parts = args.output_dir.rstrip('/').split('/')
-        if len(output_dir_parts) >= 1:
-            output_dir_parts.insert(-1, args.task)
+        data_index = output_dir_parts.index('data') if 'data' in output_dir_parts else -1
+        if data_index >= 0 and data_index < len(output_dir_parts) - 1:
+            output_dir_parts.insert(data_index + 1, args.task)
             args.output_dir = '/'.join(output_dir_parts)
         
         output_jsonl_parts = args.output_jsonl.split('/')
-        if len(output_jsonl_parts) >= 1:
-            output_jsonl_parts.insert(-1, args.task)
+        data_index = output_jsonl_parts.index('data') if 'data' in output_jsonl_parts else -1
+        if data_index >= 0 and data_index < len(output_jsonl_parts) - 1:
+            output_jsonl_parts.insert(data_index + 1, args.task)
             args.output_jsonl = '/'.join(output_jsonl_parts)
         
         text_gt_output_parts = args.text_gt_output.split('/')
-        if len(text_gt_output_parts) >= 1:
-            text_gt_output_parts.insert(-1, args.task)
+        data_index = text_gt_output_parts.index('data') if 'data' in text_gt_output_parts else -1
+        if data_index >= 0 and data_index < len(text_gt_output_parts) - 1:
+            text_gt_output_parts.insert(data_index + 1, args.task)
             args.text_gt_output = '/'.join(text_gt_output_parts)
     
     # Check if config exists

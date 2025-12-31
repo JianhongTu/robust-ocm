@@ -67,11 +67,11 @@ class TextRenderer:
             Output directory path with task prefix if applicable
         """
         if self.task:
-            # Insert task subfolder before the last part of the path
+            # Insert task subfolder after data/ directory
             parts = base_output_dir.rstrip('/').split('/')
-            if len(parts) >= 1:
-                # Insert task before the last directory
-                parts.insert(-1, self.task)
+            data_index = parts.index('data') if 'data' in parts else -1
+            if data_index >= 0 and data_index < len(parts) - 1:
+                parts.insert(data_index + 1, self.task)
             else:
                 parts.append(self.task)
             return '/'.join(parts)
