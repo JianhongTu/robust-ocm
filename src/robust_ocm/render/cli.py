@@ -323,7 +323,7 @@ Examples:
     # Generate text ground truth if output path is specified
     if args.text_gt_output:
         print(f"Generating text ground truth to: {args.text_gt_output}")
-        convert_jsonl_to_omnidoc(args.output_jsonl, args.text_gt_output)
+        convert_jsonl_to_omnidoc(args.output_jsonl, args.text_gt_output, concatenate=True)
         print(f"Text ground truth saved to: {args.text_gt_output}")
 
     return 0
