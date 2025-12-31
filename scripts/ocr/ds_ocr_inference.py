@@ -153,32 +153,47 @@ def clean_formula(text: str) -> str:
     return cleaned_text
 
 
+def re_match(text):
+    """
+    Extract matches from OCR output
+
+    Args:
+        text: OCR output text
+
+    Returns:
+        Tuple of (all_matches, filtered_matches)
+    """
+    pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    # Extract the full match strings
+    filtered_matches = []
+    for a_match in matches:
+        filtered_matches.append(a_match[0])
+    return matches, filtered_matches
+
+
 def clean_ocr_content(content: str) -> str:
     """
     Clean and normalize OCR output
-    
+
     Args:
         content: Raw OCR output
-        
+
     Returns:
         Cleaned content
     """
     # Clean formulas
     content = clean_formula(content)
-    
-    # Remove reference and detection tags
-    pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
-    matches = re.findall(pattern, content, re.DOTALL)
-    
-    for match in matches:
-        content = content.replace(match[0], '')
-    
-    # Normalize line breaks
-    content = content.replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n')
-    
-    # Remove center tags
-    content = content.replace('<center>', '').replace('</center>', '')
-    
+
+    # Remove reference and detection tags in a loop
+    matches_ref, filtered_matches = re_match(content)
+    for a_match in filtered_matches:
+        content = content.replace(a_match, '')
+
+    # Normalize line breaks and remove center tags
+    content = content.replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n').replace('<center>', '').replace('</center>', '')
+
     return content.strip()
 
 
