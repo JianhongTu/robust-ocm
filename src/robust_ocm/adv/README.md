@@ -2,6 +2,15 @@
 
 This module provides functionality to generate adversarial splits of the dataset by applying various perturbations to text and image data.
 
+## Used Corruption Splits
+- Vanilla: No corruption; clean images rendered at 11pt and 200 dpi.
+- Dense Text: Reduced font size and line height; rendered at 7pt
+- Blurry: Upscaled from images rendered at 42 dpi to 200 dpi.
+- Lossy Encoding: Compress with Jpeg with 1 quality setting.
+- DPI Downscaling: Rendered at 72 dpi.
+- Binarization: 1-bit color by thresholding/
+- Resampling Kernel: Downscaling to half size with nearest method.
+
 ## Structure
 - `perturbations.py`: Base classes and registry system.
 - `text_perturbations.py`: Text-based perturbation implementations.
@@ -14,7 +23,7 @@ This module provides functionality to generate adversarial splits of the dataset
 - [x] DPI / Resolution Downscaling: Modify rendering DPI to simulate lower resolution scans/captures.
 
 ### Image-based Perturbations (in `image_perturbations.py`)
-- [x] Blur: Apply blurring effects (e.g., Gaussian blur) with varying intensities.
+- [x] Blur: Upscale images rendered at a low DPI to create blurry effect using bilinear.
 - [x] Binarization: Convert images to binary using thresholding.
 - [x] Lossy Encoding: Apply JPEG or WebP compression with configurable quality levels.
 - [x] Resampling Kernel: Apply different resampling filters (nearest, bilinear, bicubic, lanczos) when resizing.
