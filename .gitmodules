@@ -1,0 +1,3 @@
+[submodule "repo/OmniDocBench"]
+	path = repo/OmniDocBench
+	url = https://github.com/opendatalab/OmniDocBench.git
