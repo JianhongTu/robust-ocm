@@ -7,7 +7,7 @@ Before running python codes, activate the environment via "micromamba activate <
 
 Environments:
 1. robust_ocm: for running the main codebase
-2. paddle: for running paddle related code (e.g., repo/paddle/bbox_cli.py)
-3. deepseek-ocr: for running deepseek related code
+2. test: for running vllm inference tests
+3. vllm: for running vllm interence tests as well if "test" environment is not available
 
 NOTE: Always check README.md files under each folder for more specific instructions.

@@ -1,36 +1,30 @@
 #!/usr/bin/env python3
 """
-DeepSeek-OCR inference script with concurrent processing.
+Kimi-VL OCR inference script with concurrent processing.
 
-To start vLLM server with data parallelism for DeepSeek-OCR:
+To start vLLM server with data parallelism for Kimi-VL:
 
 # Single GPU:
-vllm serve deepseek-ai/DeepSeek-OCR \
+vllm serve <kimi-vl-model-name> \
     --host 0.0.0.0 \
     --port 8000 \
     --dtype auto \
-    --trust-remote-code \
-    --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor \
-    --no-enable-prefix-caching \
-    --mm-processor-cache-gb 0
+    --trust-remote-code
 
 # Multiple GPUs (data parallelism):
-vllm serve deepseek-ai/DeepSeek-OCR \
+vllm serve <kimi-vl-model-name> \
     --host 0.0.0.0 \
     --port 8000 \
     --data-parallel-size 4 \
     --dtype auto \
-    --trust-remote-code \
-    --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor \
-    --no-enable-prefix-caching \
-    --mm-processor-cache-gb 0
+    --trust-remote-code
 
 Then run this script:
-micromamba run -n test python scripts/ocr/ds_ocr_inference.py \
+micromamba run -n test python ./scripts/ocr/kimi_vl_inference.py \
     --input data/longbenchv2_img/images \
-    --output data/pred/dpsk \
+    --output data/pred/kimi_vl \
     --base_url http://localhost:8000/v1 \
-    --model_name deepseek-ai/DeepSeek-OCR \
+    --model_name kimi-vl-thinking-2506 \
     --max_workers 32
 """
 
@@ -42,9 +36,6 @@ import sys
 import argparse
 import concurrent.futures
 from tqdm import tqdm
-import re
-import json
-
 
 def encode_image(image_path):
     """
@@ -53,7 +44,30 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-prompt = '<image>\n<|grounding|>Convert the document to markdown.'
+prompt = r"""You are an AI assistant specialized in converting PDF images to Markdown format. Please follow these instructions for the conversion:
+1. Text Processing:
+- Accurately recognize all text content in the PDF image without guessing or inferring.
+- Convert the recognized text into Markdown format.
+- Maintain the original document structure, including headings, paragraphs, lists, etc.
+
+2. Mathematical Formula Processing:
+- Convert all mathematical formulas to LaTeX format.
+- Enclose inline formulas with \( \). For example: This is an inline formula \( E = mc^2 \)
+- Enclose block formulas with \[ \]. For example: \[ \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \]
+
+3. Table Processing:
+- Convert tables to HTML format.
+- Wrap the entire table with <table> and </table>.
+
+4. Figure Handling:
+- Ignore figures content in the PDF image. Do not attempt to describe or convert images.
+
+5. Output Format:
+- Ensure the output Markdown document has a clear structure with appropriate line breaks between elements.
+- For complex layouts, try to maintain the original document's structure and format as closely as possible.
+
+Please strictly follow these guidelines to ensure accuracy and consistency in the conversion. Your task is to accurately convert the content of the PDF image into Markdown format without adding any extra explanations or comments.
+"""
 
 def process_image(client, image_file, image_dir, result_dir, model_name, presence_penalty=0.0):
     """
@@ -84,18 +98,15 @@ def process_image(client, image_file, image_dir, result_dir, model_name, presenc
                     }
                 ],
             }],
-            max_tokens=8100,
+            max_tokens=8192,
             timeout=300,
             presence_penalty=presence_penalty,
         )
 
         result = response.choices[0].message.content
 
-        # Clean the content
-        cleaned_result = clean_ocr_content(result)
-
         with open(output_path, "w", encoding='utf-8') as f:
-            print(cleaned_result, file=f)
+            print(result, file=f)
 
         return f"✓ 成功处理: {image_file}"
     except APIConnectionError as e:
@@ -108,7 +119,7 @@ def parse_args():
     """
     解析命令行参数
     """
-    parser = argparse.ArgumentParser(description='DeepSeek-OCR inference with concurrent processing')
+    parser = argparse.ArgumentParser(description='Kimi-VL OCR inference with concurrent processing')
     
     parser.add_argument('--input', '-i', type=str, required=True,
                        help='Input directory containing images')
@@ -125,7 +136,7 @@ def parse_args():
                        help='API key (optional for local vLLM)')
     
     parser.add_argument('--model_name', type=str,
-                       default='deepseek-ai/DeepSeek-OCR',
+                       default='kimi-vl-thinking-2506',
                        help='Model name')
     
     parser.add_argument('--max_workers', type=int,
@@ -137,49 +148,6 @@ def parse_args():
                        help='Presence penalty for repetition control (0.0 to 2.0)')
     
     return parser.parse_args()
-
-
-def clean_formula(text: str) -> str:
-    """Clean formula formatting in OCR output"""
-    formula_pattern = r'\\\[(.*?)\\\]'
-    
-    def process_formula(match):
-        formula = match.group(1)
-        formula = re.sub(r'\\quad\s*\([^)]*\)', '', formula)
-        formula = formula.strip()
-        return r'\[' + formula + r'\]'
-    
-    cleaned_text = re.sub(formula_pattern, process_formula, text)
-    return cleaned_text
-
-
-def clean_ocr_content(content: str) -> str:
-    """
-    Clean and normalize OCR output
-    
-    Args:
-        content: Raw OCR output
-        
-    Returns:
-        Cleaned content
-    """
-    # Clean formulas
-    content = clean_formula(content)
-    
-    # Remove reference and detection tags
-    pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
-    matches = re.findall(pattern, content, re.DOTALL)
-    
-    for match in matches:
-        content = content.replace(match[0], '')
-    
-    # Normalize line breaks
-    content = content.replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n')
-    
-    # Remove center tags
-    content = content.replace('<center>', '').replace('</center>', '')
-    
-    return content.strip()
 
 
 if __name__ == "__main__":

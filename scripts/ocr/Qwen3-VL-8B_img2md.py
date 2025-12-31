@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python3
 """
 Qwen3-VL-8B OCR inference script with concurrent processing.
@@ -13,16 +11,16 @@ vllm serve Qwen/Qwen3-VL-8B-Instruct \
     --dtype auto \
     --trust-remote-code
 
-# Multiple GPUs (data parallelism with tensor parallelism):
+# Multiple GPUs (data parallelism):
 vllm serve Qwen/Qwen3-VL-8B-Instruct \
     --host 0.0.0.0 \
     --port 8000 \
-    --tensor-parallel-size 4 \
+    --data-parallel-size 4 \
     --dtype auto \
     --trust-remote-code
 
 Then run this script:
-python ./scripts/ocr/Qwen3-VL-8B_img2md.py \
+micromamba run -n test python ./scripts/ocr/Qwen3-VL-8B_img2md.py \
     --input data/longbenchv2_img/images \
     --output data/pred/qwenvl \
     --base_url http://localhost:8000/v1 \
@@ -71,7 +69,7 @@ prompt = r"""You are an AI assistant specialized in converting PDF images to Mar
 Please strictly follow these guidelines to ensure accuracy and consistency in the conversion. Your task is to accurately convert the content of the PDF image into Markdown format without adding any extra explanations or comments.
 """
 
-def process_image(client, image_file, image_dir, result_dir, model_name):
+def process_image(client, image_file, image_dir, result_dir, model_name, presence_penalty=0.0):
     """
     处理单个图片文件
     """
@@ -100,7 +98,9 @@ def process_image(client, image_file, image_dir, result_dir, model_name):
                     }
                 ],
             }],
-            timeout=10000,
+            max_tokens=8192,
+            timeout=300,
+            presence_penalty=presence_penalty,
         )
 
         result = response.choices[0].message.content
@@ -142,6 +142,10 @@ def parse_args():
     parser.add_argument('--max_workers', type=int,
                        default=32,
                        help='Number of concurrent workers')
+    
+    parser.add_argument('--presence_penalty', type=float,
+                       default=0.0,
+                       help='Presence penalty for repetition control (0.0 to 2.0)')
     
     return parser.parse_args()
 
@@ -192,7 +196,7 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         # 提交所有任务
         futures = {
-            executor.submit(process_image, client, image_file, image_dir, result_dir, args.model_name): image_file
+            executor.submit(process_image, client, image_file, image_dir, result_dir, args.model_name, args.presence_penalty): image_file
             for image_file in new_files
         }
         
