@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--method', default='nearest', choices=['nearest', 'bilinear', 'bicubic', 'lanczos'], help='Resampling method for resampling_kernel')
     parser.add_argument('--scale', type=float, default=0.8, help='Scale factor for resampling_kernel (e.g., 0.5 for 50% size)')
     parser.add_argument('--limit', type=int, default=None, help='Limit the number of images to process (for testing)')
+    parser.add_argument('--task', default=None, help='Task subfolder in data/ (e.g., ocr, vqa, etc.)')
     
     args = parser.parse_args()
     
@@ -40,7 +41,8 @@ def main():
             folder_name = 'noise'
         elif folder_name == 'resampling_kernel':
             folder_name = f'resample_{args.method}_{args.scale}'
-        args.output_dir = f'data/adv_{folder_name}/images'
+        task_prefix = f'{args.task}/' if args.task else ''
+        args.output_dir = f'data/{task_prefix}adv_{folder_name}/images'
     
     os.makedirs(args.output_dir, exist_ok=True)
     
@@ -69,7 +71,8 @@ def main():
         'perturbation_type': args.perturbation_type,
         'params': params,
         'input_dir': args.input_dir,
-        'output_dir': args.output_dir
+        'output_dir': args.output_dir,
+        'task': args.task
     }
     metadata_path = os.path.join(args.output_dir, '..', 'metadata.json')
     with open(metadata_path, 'w') as f:
