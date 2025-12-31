@@ -29,7 +29,7 @@ def apply_perturbation_to_config(base_config, perturbation_type, perturbation_pa
     if perturbation_type == 'dense_text':
         font_size = perturbation_params.get('font_size', 8)
         config['font-size'] = font_size
-        config['line-height'] = font_size + 1
+        config['line-height'] = font_size - 1
     elif perturbation_type == 'dpi_downscale':
         dpi = perturbation_params.get('dpi', 72)
         config['dpi'] = dpi
