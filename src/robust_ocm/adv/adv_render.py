@@ -1,134 +1,42 @@
 """
-Adversarial rendering wrapper that applies text perturbations and outputs to dedicated folders
+Adversarial rendering wrapper that applies config perturbations and outputs to dedicated folders
 """
 
 import os
 import json
-import shutil
 import warnings
 import argparse
-from multiprocessing import Pool
-from tqdm import tqdm
+import tempfile
 
 # Import once at module level
-from robust_ocm.render.cli import process_one_item, DOMAIN_MAP
-from robust_ocm.render.config import Config
-from robust_ocm.adv import apply_perturbation
+from robust_ocm.render.cli import batch_process_to_images
 
 
-# Global variable to cache config in worker processes
-_worker_config = None
-_worker_config_path = None
-
-def adv_process_one_item(args):
-    """Process single item with adversarial perturbations - optimized version"""
-    item, output_dir, config_dict, extraction_level, perturbation_type, perturbation_params = args
+def apply_perturbation_to_config(base_config, perturbation_type, perturbation_params):
+    """
+    Apply perturbation to the base config dict.
     
-    # Apply perturbation directly to the config dict
-    if perturbation_type:
-        if perturbation_type in ['line_height_compression', 'tofu', 'dpi_downscale', 'reduced_font_size', 'tighter_layout']:
-            # These modify the config - apply once per item
-            # Make a copy only when needed
-            config_dict = config_dict.copy()
-            config_dict = apply_perturbation(config_dict, perturbation_type, **perturbation_params)
-        elif perturbation_type in ['font_weight', 'homoglyph_substitution']:
-            # These modify the text
-            if 'context' in item:
-                item['context'] = apply_perturbation(item['context'], perturbation_type, **perturbation_params)
+    Args:
+        base_config: Base configuration dictionary
+        perturbation_type: Type of perturbation to apply
+        perturbation_params: Parameters for the perturbation
     
-    # Call process_one_item with correct parameters
-    return process_one_item((item, output_dir, config_dict, extraction_level))
-
-
-def adv_batch_process_to_images(json_path, output_dir, output_jsonl_path, 
-                               config_path, processes=8, is_recover=False, 
-                               batch_size=50, limit=None, extraction_level="line",
-                               blacklist_path=None, perturbation_type=None, perturbation_params=None):
-    """Batch process JSON data to generate adversarial images"""
+    Returns:
+        Modified configuration dictionary
+    """
+    config = base_config.copy()
     
-    # Load configuration ONCE before multiprocessing (like normal render)
-    config = Config.load_config(config_path)
+    if perturbation_type == 'dense_text':
+        font_size = perturbation_params.get('font_size', 8)
+        config['font-size'] = font_size
+        config['line-height'] = font_size + 1
+    elif perturbation_type == 'dpi_downscale':
+        dpi = perturbation_params.get('dpi', 72)
+        config['dpi'] = dpi
+    elif perturbation_type == 'tofu':
+        config['font-path'] = base_config.get('font-path')
     
-    print(f"Loaded config from: {config_path}")
-    
-    # Prepare output directory
-    if not is_recover:
-        if os.path.isdir(output_dir):
-            shutil.rmtree(output_dir)
-        os.makedirs(output_dir, exist_ok=True)
-        if os.path.exists(output_jsonl_path):
-            os.remove(output_jsonl_path)
-    
-    # Read data and handle _id to unique_id renaming
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data_to_process = json.load(f)
-    
-    # Rename _id to unique_id for all items in memory
-    for item in data_to_process:
-        if 'unique_id' not in item and '_id' in item:
-            item['unique_id'] = item.pop('_id')
-    
-    # Apply blacklist if provided
-    if blacklist_path and os.path.exists(blacklist_path):
-        with open(blacklist_path, 'r', encoding='utf-8') as f:
-            blacklist = set(line.strip() for line in f if line.strip())
-        original_count = len(data_to_process)
-        data_to_process = [item for item in data_to_process if item.get('unique_id') not in blacklist]
-        print(f"Filtered {original_count - len(data_to_process)} items using blacklist")
-    
-    # Apply limit if specified
-    if limit is not None:
-        print(f"Limiting processing to {limit} samples...")
-        data_to_process = data_to_process[:limit]
-    
-    if not data_to_process:
-        print("All items processed")
-        return
-    
-    # Prepare arguments for multiprocessing - pass pre-loaded config
-    process_args = [(item, output_dir, config, extraction_level, perturbation_type, perturbation_params or {}) for item in data_to_process]
-    
-    # Parallel processing with optimized chunk size
-    batch_buffer = []
-    
-    # Use larger chunk size for better performance
-    chunk_size = max(1, len(process_args) // (processes * 4))
-    
-    with Pool(processes=processes) as pool:
-        for result_item, bbox_count in tqdm(pool.imap_unordered(adv_process_one_item, process_args, chunksize=chunk_size), 
-                                           total=len(data_to_process), desc="Processing adversarial samples"):
-            if result_item:
-                batch_buffer.append(result_item)
-                _id = result_item.get('unique_id', 'UNKNOWN')
-                count = len(result_item.get('image_paths', []))
-                tqdm.write(f"{_id}: generated {count} pages, {bbox_count} bboxes")
-                
-                # Batch write
-                if len(batch_buffer) >= batch_size:
-                    with open(output_jsonl_path, 'a', encoding='utf-8') as f:
-                        for item in batch_buffer:
-                            # Extract only essential fields
-                            essential_data = {
-                                'unique_id': item.get('unique_id'),
-                                'image_paths': item.get('image_paths'),
-                                'bboxes': item.get('bboxes')
-                            }
-                            f.write(json.dumps(essential_data, ensure_ascii=False) + '\n')
-                    batch_buffer = []
-    
-    # Write remaining items
-    if batch_buffer:
-        with open(output_jsonl_path, 'a', encoding='utf-8') as f:
-            for item in batch_buffer:
-                # Extract only essential fields
-                essential_data = {
-                    'unique_id': item.get('unique_id'),
-                    'image_paths': item.get('image_paths'),
-                    'bboxes': item.get('bboxes')
-                }
-                f.write(json.dumps(essential_data, ensure_ascii=False) + '\n')
-    
-    print("Adversarial processing complete")
+    return config
 
 
 def main():
@@ -138,14 +46,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  # Generate bold text adversarial samples
-  adv-render --perturbation-type font_weight --weight bold --limit 100
+  # Generate dense text samples (small font + tight line spacing)
+  adv-render --perturbation-type dense_text --font-size 8
   
-  # Generate homoglyph substitution samples
-  adv-render --perturbation-type homoglyph_substitution --substitution-rate 0.2
+  # Generate DPI downscaled samples
+  adv-render --perturbation-type dpi_downscale --dpi 72
   
-  # Generate line height compressed samples
-  adv-render --perturbation-type line_height_compression --compression-factor 0.8
+  # Generate tofu samples (missing characters)
+  adv-render --perturbation-type tofu
         '''
     )
     
@@ -194,16 +102,12 @@ Examples:
     # Perturbation arguments
     parser.add_argument('--perturbation-type',
                        required=True,
-                       choices=['font_weight', 'homoglyph_substitution', 'line_height_compression', 'tofu', 'dpi_downscale', 'reduced_font_size', 'tighter_layout'],
+                       choices=['dense_text', 'tofu', 'dpi_downscale'],
                        help='Type of text perturbation to apply')
     
     # Perturbation parameters
-    parser.add_argument('--weight', default='bold', help='Font weight for font_weight perturbation')
-    parser.add_argument('--substitution-rate', type=float, default=0.1, help='Substitution rate for homoglyph_substitution')
-    parser.add_argument('--compression-factor', type=float, default=0.8, help='Compression factor for line_height_compression')
+    parser.add_argument('--font-size', type=int, default=8, help='Target font size for dense_text perturbation (default 8 points)')
     parser.add_argument('--dpi', type=int, default=72, help='Target DPI value for dpi_downscale perturbation (default 72)')
-    parser.add_argument('--font-size', type=int, default=8, help='Target font size for reduced_font_size perturbation (default 8 points)')
-    parser.add_argument('--line-height-factor', type=float, default=0.8, help='Line height scaling factor for tighter_layout (default 0.8 for 80% of original)')
     
     # Markdown mode
     parser.add_argument('--markdown-mode', action='store_true', help='Enable markdown parsing for rich text formatting')
@@ -229,92 +133,70 @@ Examples:
     # Generate automatic output paths if not specified
     if not args.output_dir:
         perturbation_suffix = args.perturbation_type
-        if args.perturbation_type == 'font_weight':
-            perturbation_suffix = args.weight
-        elif args.perturbation_type == 'homoglyph_substitution':
-            perturbation_suffix = f"homoglyph_{args.substitution_rate}"
-        elif args.perturbation_type == 'line_height_compression':
-            perturbation_suffix = f"line_height_{args.compression_factor}"
+        if args.perturbation_type == 'dense_text':
+            perturbation_suffix = f"fontsize_{args.font_size}"
         elif args.perturbation_type == 'dpi_downscale':
             perturbation_suffix = f"dpi_{args.dpi}"
-        elif args.perturbation_type == 'reduced_font_size':
-            perturbation_suffix = f"fontsize_{args.font_size}"
-        elif args.perturbation_type == 'tighter_layout':
-            perturbation_suffix = f"layout_{args.line_height_factor}"
         
         args.output_dir = f'./data/adv_{perturbation_suffix}/images'
         args.output_jsonl = f'./data/adv_{perturbation_suffix}/line_bbox.jsonl'
     
-    # Load and modify config for markdown mode if needed - do this once
-    config = Config.load_config(args.config)
-    if args.markdown_mode or args.perturbation_type == 'font_weight':
-        config['markdown-mode'] = True
+    # Load base config directly from JSON to ensure it's JSON-serializable
+    with open(args.config, 'r', encoding='utf-8') as f:
+        base_config = json.load(f)
+    
+    # Apply markdown mode if needed
+    if args.markdown_mode:
+        base_config['markdown-mode'] = True
         print("Markdown mode enabled")
     
+    # Collect perturbation parameters
+    perturbation_params = {}
+    if args.perturbation_type == 'dense_text':
+        perturbation_params['font_size'] = args.font_size
+    elif args.perturbation_type == 'dpi_downscale':
+        perturbation_params['dpi'] = args.dpi
+    
+    # Apply perturbation to config
+    config = apply_perturbation_to_config(base_config, args.perturbation_type, perturbation_params)
+    
+    # Save metadata
+    metadata = {
+        'perturbation_type': args.perturbation_type,
+        'params': perturbation_params,
+        'input_dir': args.data_json,
+        'output_dir': args.output_dir,
+        'output_jsonl': args.output_jsonl,
+        'config': args.config,
+        'markdown_mode': args.markdown_mode
+    }
+    metadata_path = os.path.join(os.path.dirname(args.output_dir), 'metadata.json')
+    os.makedirs(os.path.dirname(args.output_dir), exist_ok=True)
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=4)
+    
+    print(f"Starting adversarial rendering with {args.perturbation_type}")
+    print(f"Output directory: {args.output_dir}")
+    print(f"Output JSONL: {args.output_jsonl}")
+    
     # Save modified config to temporary file for workers
-    import tempfile
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_config:
-        # Create a JSON-serializable version of the config
-        json_config = {}
-        with open(args.config, 'r', encoding='utf-8') as f:
-            json_config = json.load(f)
-        
-        # Apply markdown mode if needed
-        if args.markdown_mode or args.perturbation_type == 'font_weight':
-            json_config['markdown-mode'] = True
-        
-        json.dump(json_config, temp_config)
+        json.dump(config, temp_config)
         temp_config_path = temp_config.name
     
     try:
-        # Collect perturbation parameters
-        perturbation_params = {}
-        if args.perturbation_type == 'font_weight':
-            perturbation_params['weight'] = args.weight
-        elif args.perturbation_type == 'homoglyph_substitution':
-            perturbation_params['substitution_rate'] = args.substitution_rate
-        elif args.perturbation_type == 'line_height_compression':
-            perturbation_params['compression_factor'] = args.compression_factor
-        elif args.perturbation_type == 'dpi_downscale':
-            perturbation_params['dpi'] = args.dpi
-        elif args.perturbation_type == 'reduced_font_size':
-            perturbation_params['font_size'] = args.font_size
-        elif args.perturbation_type == 'tighter_layout':
-            perturbation_params['line_height_factor'] = args.line_height_factor
-        
-        # Save metadata
-        metadata = {
-            'perturbation_type': args.perturbation_type,
-            'params': perturbation_params,
-            'input_dir': args.data_json,
-            'output_dir': args.output_dir,
-            'output_jsonl': args.output_jsonl,
-            'config': args.config,
-            'markdown_mode': args.markdown_mode
-        }
-        metadata_path = os.path.join(os.path.dirname(args.output_dir), 'metadata.json')
-        os.makedirs(os.path.dirname(args.output_dir), exist_ok=True)
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=4)
-        
-        print(f"Starting adversarial rendering with {args.perturbation_type}")
-        print(f"Output directory: {args.output_dir}")
-        print(f"Output JSONL: {args.output_jsonl}")
-        
-        # Batch process to images with optimized config
-        adv_batch_process_to_images(
+        # Call the standard render batch_process_to_images function
+        batch_process_to_images(
             json_path=args.data_json,
             output_dir=args.output_dir,
             output_jsonl_path=args.output_jsonl,
-            config_path=temp_config_path,  # Use temp config
+            config_path=temp_config_path,
             processes=args.processes,
             is_recover=args.recover,
             batch_size=args.batch_size,
             limit=args.limit,
             extraction_level=args.extraction_level,
-            blacklist_path=args.blacklist,
-            perturbation_type=args.perturbation_type,
-            perturbation_params=perturbation_params
+            blacklist_path=args.blacklist
         )
         
         print(f"Adversarial processing complete. Images saved to: {args.output_dir}")

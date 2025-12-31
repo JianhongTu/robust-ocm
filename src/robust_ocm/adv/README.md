@@ -10,8 +10,7 @@ This module provides functionality to generate adversarial splits of the dataset
 ## TODO List of Perturbations to Implement
 
 ### Text-based / Config Perturbations (in `text_perturbations.py`)
-- [x] Reduced Font Size: Decrease font size to simulate smaller text rendering.
-- [x] Tighter Layout: Reduce line space to create more compact text layout.
+- [x] Dense Text: Combine reduced font size and tight line spacing to create very compact text layout.
 - [x] DPI / Resolution Downscaling: Modify rendering DPI to simulate lower resolution scans/captures.
 
 ### Image-based Perturbations (in `image_perturbations.py`)
@@ -30,7 +29,7 @@ To apply a perturbation:
 from robust_ocm.adv import apply_perturbation
 
 # Apply a specific perturbation
-perturbed_data = apply_perturbation(data, 'font_weight', **params)
+perturbed_data = apply_perturbation(data, 'dense_text', font_size=8)
 ```
 
 ## Adding New Perturbations
@@ -56,24 +55,28 @@ The following commands can be used to generate adversarial splits for each imple
 
 ### Text-based / Config Perturbations
 
-- **Reduced Font Size**:
+- **Dense Text** (combines reduced font size and tight line spacing):
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type reduced_font_size --font-size 8 --output-dir data/adv_fontsize_8
-  ```
-
-- **Tighter Layout**:
-  ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type tighter_layout --line-height-factor 0.8 --output-dir data/adv_layout_0.8
-  ```
-
-- **Font Size + Layout Density**:
-  ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type font_size_density --density-factor 1.5 --output-dir data/adv_density_1.5
+  # Generate dense text with 8-point font (line-height = 9)
+  python -m robust_ocm.adv.adv_render --perturbation-type dense_text --font-size 8
+  
+  # Generate dense text with 11-point font (line-height = 12)
+  python -m robust_ocm.adv.adv_render --perturbation-type dense_text --font-size 11
   ```
 
 - **DPI / Resolution Downscaling**:
   ```bash
-  python -m robust_ocm.adv.adv_render --perturbation-type dpi_downscale --dpi 72 --output-dir data/adv_dpi_72
+  # Generate low-resolution images (72 DPI)
+  python -m robust_ocm.adv.adv_render --perturbation-type dpi_downscale --dpi 72
+  
+  # Generate very low-resolution images (48 DPI)
+  python -m robust_ocm.adv.adv_render --perturbation-type dpi_downscale --dpi 48
+  ```
+
+- **Tofu (Missing Characters)**:
+  ```bash
+  # Generate images with Verdana font (may cause tofu for unsupported characters)
+  python -m robust_ocm.adv.adv_render --perturbation-type tofu
   ```
 
 ### Image-based Perturbations
