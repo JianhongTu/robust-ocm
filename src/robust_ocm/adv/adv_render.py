@@ -54,6 +54,9 @@ Examples:
   
   # Generate tofu samples (missing characters)
   adv-render --perturbation-type tofu
+  
+  # Generate samples in a task subfolder
+  adv-render --perturbation-type dense_text --font-size 8 --task ocr
         '''
     )
     
@@ -99,6 +102,11 @@ Examples:
                        default=None,
                        help='Path to blacklist file with sample IDs to skip (one ID per line)')
     
+    # Task argument
+    parser.add_argument('--task',
+                       default=None,
+                       help='Task subfolder in data/ (e.g., ocr, vqa, etc.)')
+    
     # Perturbation arguments
     parser.add_argument('--perturbation-type',
                        required=True,
@@ -138,8 +146,10 @@ Examples:
         elif args.perturbation_type == 'dpi_downscale':
             perturbation_suffix = f"dpi_{args.dpi}"
         
-        args.output_dir = f'./data/adv_{perturbation_suffix}/images'
-        args.output_jsonl = f'./data/adv_{perturbation_suffix}/line_bbox.jsonl'
+        # Include task subfolder if specified
+        task_prefix = f'{args.task}/' if args.task else ''
+        args.output_dir = f'./data/{task_prefix}adv_{perturbation_suffix}/images'
+        args.output_jsonl = f'./data/{task_prefix}adv_{perturbation_suffix}/line_bbox.jsonl'
     
     # Load base config directly from JSON to ensure it's JSON-serializable
     with open(args.config, 'r', encoding='utf-8') as f:
@@ -168,7 +178,8 @@ Examples:
         'output_dir': args.output_dir,
         'output_jsonl': args.output_jsonl,
         'config': args.config,
-        'markdown_mode': args.markdown_mode
+        'markdown_mode': args.markdown_mode,
+        'task': args.task
     }
     metadata_path = os.path.join(os.path.dirname(args.output_dir), 'metadata.json')
     os.makedirs(os.path.dirname(args.output_dir), exist_ok=True)

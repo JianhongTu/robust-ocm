@@ -20,13 +20,14 @@ except ImportError:
 class TextRenderer:
     """Main class for rendering text to images with bounding box extraction"""
     
-    def __init__(self, config_path=None, config_dict=None):
+    def __init__(self, config_path=None, config_dict=None, task=None):
         """
         Initialize text renderer
         
         Args:
             config_path: Path to configuration JSON file
             config_dict: Configuration dictionary (overrides config_path if provided)
+            task: Task subfolder name (e.g., 'ocr', 'vqa', etc.) for organizing output
         """
         # Load configuration
         if config_dict is None:
@@ -37,6 +38,9 @@ class TextRenderer:
             self.config = config_dict.copy()
             # Convert special fields if needed
             Config.validate_config(self.config)
+        
+        # Store task for path generation
+        self.task = task
         
         # Initialize components
         self.pdf_generator = PDFGenerator(self.config)
@@ -51,6 +55,27 @@ class TextRenderer:
         if self._bbox_extractor is None:
             self._bbox_extractor = BBoxExtractor()
         return self._bbox_extractor
+    
+    def get_output_dir(self, base_output_dir):
+        """
+        Construct output directory path with task prefix if task is set
+        
+        Args:
+            base_output_dir: Base output directory path
+            
+        Returns:
+            Output directory path with task prefix if applicable
+        """
+        if self.task:
+            # Insert task subfolder before the last part of the path
+            parts = base_output_dir.rstrip('/').split('/')
+            if len(parts) >= 1:
+                # Insert task before the last directory
+                parts.insert(-1, self.task)
+            else:
+                parts.append(self.task)
+            return '/'.join(parts)
+        return base_output_dir
     
     def render_text(self, text, output_dir, unique_id=None, extraction_level=None):
         """
