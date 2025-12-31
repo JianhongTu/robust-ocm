@@ -224,6 +224,9 @@ Examples:
   
   # Resume interrupted processing
   robust-ocm-render --recover
+  
+  # Process samples in a task subfolder
+  robust-ocm-render --task ocr
         '''
     )
     
@@ -271,11 +274,33 @@ Examples:
                        default=None,
                        help='Path to blacklist file with sample IDs to skip (one ID per line)')
 
+    parser.add_argument('--task',
+                       default=None,
+                       help='Task subfolder in data/ (e.g., ocr, vqa, etc.)')
+
     parser.add_argument('--text-gt-output',
                        default='./data/longbenchv2_img/text_ground_truth.json',
                        help='Path to save text ground truth file (OmniDocBench format JSON)')
 
     args = parser.parse_args()
+    
+    # Modify default output paths if task is specified
+    if args.task:
+        # Insert task subfolder into output paths
+        output_dir_parts = args.output_dir.rstrip('/').split('/')
+        if len(output_dir_parts) >= 1:
+            output_dir_parts.insert(-1, args.task)
+            args.output_dir = '/'.join(output_dir_parts)
+        
+        output_jsonl_parts = args.output_jsonl.split('/')
+        if len(output_jsonl_parts) >= 1:
+            output_jsonl_parts.insert(-1, args.task)
+            args.output_jsonl = '/'.join(output_jsonl_parts)
+        
+        text_gt_output_parts = args.text_gt_output.split('/')
+        if len(text_gt_output_parts) >= 1:
+            text_gt_output_parts.insert(-1, args.task)
+            args.text_gt_output = '/'.join(text_gt_output_parts)
     
     # Check if config exists
     if not os.path.exists(args.config):
