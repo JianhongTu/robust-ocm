@@ -392,7 +392,7 @@ Examples:
                        help='Path to blacklist file with sample IDs to skip (one ID per line)')
 
     parser.add_argument('--text-gt-output',
-                       default=None,
+                       default='./data/longbenchv2_img/text_ground_truth.jsonl',
                        help='Path to save text ground truth file (OmniDocBench format JSONL)')
 
     args = parser.parse_args()
