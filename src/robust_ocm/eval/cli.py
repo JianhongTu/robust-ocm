@@ -119,7 +119,7 @@ def print_results(results: Dict):
 
 def save_results(results: Dict, output_file: str):
     """
-    Save evaluation results to JSON file.
+    Save evaluation results to JSON file with summary first, excluding duplicate metrics.
 
     Args:
         results: Results dictionary from calculate_all_metrics
@@ -127,8 +127,15 @@ def save_results(results: Dict, output_file: str):
     """
     logger.info(f"Saving results to: {output_file}")
 
+    # Reorder results to put summary first, exclude duplicate metrics
+    ordered_results = {}
+    if "summary" in results:
+        ordered_results["summary"] = results["summary"]
+    if "per_page" in results:
+        ordered_results["per_page"] = results["per_page"]
+
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(ordered_results, f, indent=2, ensure_ascii=False)
 
     logger.info(f"Results saved successfully")
 

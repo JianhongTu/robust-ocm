@@ -77,87 +77,20 @@ robust-ocm/
 
 ## Usage
 
-### Converting to OmniDocBench Format
-
-To convert the line_bbox.jsonl file to OmniDocBench format for evaluation:
+### Generate the OCR splits:
 
 ```bash
-# Convert all documents (page 0 only)
-convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json
 
-# Convert first 100 documents, page 1 only
-convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json --limit 100 --page 1
+conda run -n robust-ocm render --blacklist blacklist_short.txt --task ocr
 
-# Convert with custom page selection
-convert-to-omnidoc --input data/longbenchv2_img/line_bbox.jsonl --output data/longbenchv2_img/omnidoc_format.json --page 2
+conda run -n robust-ocm python -m robust_ocm.adv.adv_render --perturbation-type dpi_downscale --dpi 48 --blacklist ./blacklist_short.txt --task ocr
+
+conda run -n robust-ocm python -m robust_ocm.adv.adv_render --perturbation-type dense_text --font-size 7 --blacklist ./blacklist_short.txt --task ocr
+
+conda run -n robust-ocm python -m robust_ocm.adv.adv_cli --perturbation-type binarization_thresholding --threshold 128 --input-dir ./data/ocr/longbenchv2_img/images/ --task ocr
+
+conda run -n robust-ocm python -m robust_ocm.adv.adv_cli --perturbation-type lossy_encoding --format jpeg --quality 1 --input-dir ./data/ocr/longbenchv2_img/images/ --task ocr
+
+conda run -n robust-ocm python scripts/upscale_images.py --input-dir ./data/ocr/adv_dpi_48/images --output-dir ./data/ocr/adv_upscale/images --low-dpi 48 --high-dpi 200
+
 ```
-
-### Rendering Documents
-
-To render LongBench-v2 documents to images:
-
-```bash
-# Process all samples with line-level bbox extraction
-render --data-json ./data/longbenchv2/data.json
-
-# Skip samples listed in blacklist.txt (recommended to avoid blocking samples)
-render --blacklist ./blacklist.txt
-
-# Process only 10 samples with word-level extraction
-render --limit 10 --extraction-level word
-
-# Use custom configuration
-render --config ./config/config_en.json
-
-# Resume interrupted processing
-render --recover
-```
-
-### Visualization and Analysis
-
-```bash
-# Visualize results
-viz --input data/longbenchv2_img/line_bbox.jsonl
-
-# Analyze document statistics
-analyze --input data/longbenchv2_img/line_bbox.jsonl
-```
-
-## Blacklist
-
-The `blacklist.txt` file contains IDs of problematic samples that should be skipped during processing:
-
-- **Purpose**: Contains the top 25% longest samples (125 entries) that cause rendering pipeline issues
-- **Threshold**: Samples with >112,346 words
-- **Notable problematic entry**: `6724cae7bb02136c067d79be` (954,622 words) - This particular sample causes the rendering pipeline to hang
-- **Usage**: The rendering pipeline automatically skips blacklisted IDs during processing
-
-The blacklist was created to handle extremely long documents that:
-1. Cause memory issues during rendering
-2. Lead to pipeline hangs (especially `6724cae7bb02136c067d79be`)
-3. Take excessive time to process
-
-## Batch OCR Inference
-
-For batch OCR processing using DeepSeek-OCR:
-
-```bash
-# Run batch inference with default settings
-python scripts/batch_inference.py
-
-# Override input/output paths
-python scripts/batch_inference.py --input /path/to/images --output /path/to/output
-
-# Process limited number of images
-python scripts/batch_inference.py --limit 100
-
-# Use specific GPU
-python scripts/batch_inference.py --gpu 1
-```
-
-Configuration constants in `batch_inference.py` can be modified for different model sizes:
-- **Tiny**: base_size=512, image_size=512, crop_mode=False
-- **Small**: base_size=640, image_size=640, crop_mode=False  
-- **Base**: base_size=1024, image_size=1024, crop_mode=False
-- **Large**: base_size=1280, image_size=1280, crop_mode=False
-- **Gundam**: base_size=1024, image_size=640, crop_mode=True (default)

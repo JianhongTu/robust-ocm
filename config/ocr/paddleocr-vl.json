@@ -1,0 +1,8 @@
+{
+  "model_name": "PaddlePaddle/PaddleOCR-VL",
+  "prompt": "OCR:",
+  "max_tokens": 8192,
+  "temperature": 0.0,
+  "timeout": 1000,
+  "extra_body": null
+}

@@ -120,11 +120,6 @@ The following commands can be used to generate adversarial splits for each imple
   python -m robust_ocm.adv.adv_cli --perturbation-type lossy_encoding --format webp --quality 40
   ```
 
-- **Antialiasing / Hinting**:
-  ```bash
-  python -m robust_ocm.adv.adv_cli --perturbation-type antialiasing --mode none
-  ```
-
 Note: Adjust parameters as needed for your use case. Use `--limit N` to process only the first N samples for testing.
 
 ## Upscaling Script

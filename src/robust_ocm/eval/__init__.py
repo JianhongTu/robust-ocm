@@ -18,7 +18,6 @@ from .preprocessing import (
     normalize_html_table,
     normalize_latex_table,
     clean_string,
-    textblock_to_unicode,
     remove_markdown_fences,
 )
 from .cli import main
@@ -33,7 +32,6 @@ __all__ = [
     "normalize_html_table",
     "normalize_latex_table",
     "clean_string",
-    "textblock_to_unicode",
     "remove_markdown_fences",
     "main",
 ]

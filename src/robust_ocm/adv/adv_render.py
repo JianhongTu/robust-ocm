@@ -10,6 +10,7 @@ import tempfile
 
 # Import once at module level
 from robust_ocm.render.cli import batch_process_to_images
+from robust_ocm.render.convert_to_omnidoc import convert_jsonl_to_omnidoc
 
 
 def apply_perturbation_to_config(base_config, perturbation_type, perturbation_params):
@@ -29,7 +30,7 @@ def apply_perturbation_to_config(base_config, perturbation_type, perturbation_pa
     if perturbation_type == 'dense_text':
         font_size = perturbation_params.get('font_size', 8)
         config['font-size'] = font_size
-        config['line-height'] = font_size - 1
+        config['line-height'] = font_size + 1
     elif perturbation_type == 'dpi_downscale':
         dpi = perturbation_params.get('dpi', 72)
         config['dpi'] = dpi
@@ -102,6 +103,10 @@ Examples:
                        default=None,
                        help='Path to blacklist file with sample IDs to skip (one ID per line)')
     
+    parser.add_argument('--text-gt-output',
+                       default=None,
+                       help='Path to save text ground truth file (OmniDocBench format JSON)')
+    
     # Task argument
     parser.add_argument('--task',
                        default=None,
@@ -150,6 +155,10 @@ Examples:
         task_prefix = f'{args.task}/' if args.task else ''
         args.output_dir = f'./data/{task_prefix}adv_{perturbation_suffix}/images'
         args.output_jsonl = f'./data/{task_prefix}adv_{perturbation_suffix}/line_bbox.jsonl'
+        
+        # Auto-generate text ground truth output path if not specified
+        if not args.text_gt_output:
+            args.text_gt_output = f'./data/{task_prefix}adv_{perturbation_suffix}/text_ground_truth.json'
     
     # Load base config directly from JSON to ensure it's JSON-serializable
     with open(args.config, 'r', encoding='utf-8') as f:
@@ -212,6 +221,13 @@ Examples:
         
         print(f"Adversarial processing complete. Images saved to: {args.output_dir}")
         print(f"Metadata saved to: {metadata_path}")
+        
+        # Generate text ground truth if output path is specified
+        if args.text_gt_output:
+            print(f"Generating text ground truth to: {args.text_gt_output}")
+            convert_jsonl_to_omnidoc(args.output_jsonl, args.text_gt_output, concatenate=True)
+            print(f"Text ground truth saved to: {args.text_gt_output}")
+        
         return 0
     
     finally:

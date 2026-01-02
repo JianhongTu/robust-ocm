@@ -99,7 +99,7 @@ def process_image(client, image_file, image_dir, result_dir, model_name, presenc
                 ],
             }],
             max_tokens=8192,
-            timeout=300,
+            timeout=1000,
             presence_penalty=presence_penalty,
         )
 

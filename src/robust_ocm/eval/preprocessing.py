@@ -41,32 +41,6 @@ def fullwidth_to_halfwidth(s: str) -> str:
     return "".join(result)
 
 
-def textblock_to_unicode(text: str) -> str:
-    """Convert inline LaTeX formulas to Unicode text."""
-    inline_reg = re.compile(r"\$(.*?)\$|\\\((.*?)\\\)", re.DOTALL)
-    inline_matches = inline_reg.finditer(text)
-    removal_positions = []
-
-    for match in inline_matches:
-        position = [match.start(), match.end()]
-        content = match.group(1) if match.group(1) is not None else match.group(2)
-        clean_content = re.sub(r"\\([\\_&%^])", "", content)
-
-        try:
-            if any(char in clean_content for char in r"\^_"):
-                if clean_content.endswith("\\"):
-                    clean_content += " "
-                unicode_content = LatexNodes2Text().latex_to_text(clean_content)
-                removal_positions.append((position[0], position[1], unicode_content))
-        except Exception:
-            continue
-
-    for start, end, unicode_content in sorted(removal_positions, reverse=True):
-        text = text[:start] + unicode_content.strip() + text[end:]
-
-    return text
-
-
 def normalize_formula(text: str) -> str:
     """Normalize math formulas for matching.
 
@@ -219,6 +193,5 @@ def clean_string(text: str) -> str:
 def normalize_text(text: str) -> str:
     """Normalize text for evaluation."""
     text = remove_markdown_fences(text)
-    text = textblock_to_unicode(text)
     text = clean_string(text)
     return text
