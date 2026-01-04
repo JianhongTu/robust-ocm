@@ -1,7 +1,7 @@
 {
   "model_name": "Qwen/Qwen2.5-VL-7B-Instruct",
-  "prompt": "{question}",
-  "max_tokens": 128,
+  "prompt_template": "{question}\n\n{choices}\n\nBased on the above, what is the single, most likely answer choice? Format your response as follows: The correct answer is (insert answer here).",
+  "max_tokens": 1024,
   "temperature": 0.01,
   "timeout": 1000,
   "extra_body": {

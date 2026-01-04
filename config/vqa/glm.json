@@ -1,7 +1,7 @@
 {
   "model_name": "zai-org/GLM-4.1V-9B-Thinking",
   "prompt": "[gMASK]<sop><|system|>\nYou are a helpful assistant specialized in converting PDF images to Markdown format.\n<|user|>\n<|begin_of_image|><|image|><|end_of_image|>You are an AI assistant specialized in converting PDF images to Markdown format. Please follow these instructions for the conversion:\n1. Text Processing:\n- Accurately recognize all text content in the PDF image without guessing or inferring.\n- Convert the recognized text into Markdown format.\n- Maintain the original document structure, including headings, paragraphs, lists, etc.\n\n2. Output Format:\n- Ensure the output Markdown document has a clear structure with appropriate line breaks between elements.\n- For complex layouts, try to maintain the original document's structure and format as closely as possible.\n\nPlease strictly follow these guidelines to ensure accuracy and consistency in the conversion. Your task is to accurately convert the content of the PDF image into Markdown format without adding any extra explanations or comments.\n<|assistant|>",
-  "max_tokens": 8192,
+  "max_tokens": 256,
   "temperature": 0.8,
   "timeout": 1000,
   "extra_body": {

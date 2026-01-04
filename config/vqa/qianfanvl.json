@@ -1,0 +1,8 @@
+{
+  "model_name": "baidu/Qianfan-VL-8B",
+  "prompt": "<image>请识别图中所有文字",
+  "max_tokens": 196,
+  "temperature": 0.0,
+  "timeout": 1000,
+  "extra_body": null
+}

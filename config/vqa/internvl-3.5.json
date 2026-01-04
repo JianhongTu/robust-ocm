@@ -1,7 +1,7 @@
 {
   "model_name": "OpenGVLab/InternVL3_5-8B",
-  "prompt": "{question}",
-  "max_tokens": 64,
+  "prompt_template": "{question}\n\n{choices}\n\nBased on the above, what is the single, most likely answer choice? Format your response as follows: The correct answer is (insert answer here).",
+  "max_tokens": 1024,
   "temperature": null,
   "timeout": 1000,
   "extra_body": null

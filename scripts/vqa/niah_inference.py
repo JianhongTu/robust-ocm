@@ -118,7 +118,7 @@ def load_niah_data(data_path: str) -> List[Dict[str, Any]]:
     
     return data
 
-
+import re
 def format_question_prompt(question: str, prompt_template: str = None) -> str:
     """
     Format the question prompt using a template if provided.
@@ -130,6 +130,10 @@ def format_question_prompt(question: str, prompt_template: str = None) -> str:
     Returns:
         Formatted prompt string
     """
+    # match = re.search(r"secret (\w+)", question, re.I)
+    # key = match.group(1) if match else ""
+    # question = f'Extract the word after the phrase "The secret {key} is" in the document images provided.'
+
     if prompt_template:
         return prompt_template.format(question=question)
     else:
