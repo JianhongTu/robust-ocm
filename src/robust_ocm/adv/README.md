@@ -15,6 +15,7 @@ This module provides functionality to generate adversarial splits of the dataset
 - `perturbations.py`: Base classes and registry system.
 - `text_perturbations.py`: Text-based perturbation implementations.
 - `image_perturbations.py`: Image-based perturbation implementations.
+- `niah_cli.py`: CLI tool for generating Needle in a Haystack (NIAH) synthetic datasets.
 
 ## TODO List of Perturbations to Implement
 
@@ -156,5 +157,72 @@ The script simulates a real-world pipeline:
 1. **Downscale**: Reduces image dimensions to simulate low DPI capture
 2. **Upscale**: Resizes back to original dimensions using the specified method
 
-This naturally introduces blur and loss of detail, similar to what happens when low-quality scans are upscaled.</content>
+This naturally introduces blur and loss of detail, similar to what happens when low-quality scans are upscaled.
+
+## Needle in a Haystack (NIAH) CLI
+
+The NIAH CLI tool (`niah_cli.py`) generates synthetic datasets for testing retrieval capabilities in long-context scenarios. It inserts secret key-value pairs into documents and creates questions to retrieve them.
+
+### Features
+
+- Inserts 5 secret key-value pairs across different regions (0-20%, 20-40%, 40-60%, 60-80%, 80-100%) of each document
+- Predefined categories: number, animal, flower, color, city, fruit, element, planet, instrument, gemstone
+- Supports blacklist filtering to exclude specific instances
+- Configurable multiplier to generate multiple questions per document
+- Questions and answers always stored as lists for consistency
+
+### Usage
+
+```bash
+python -m robust_ocm.adv.niah_cli --input <input_file> --output <output_file> [options]
+```
+
+### Arguments
+
+- `--input`: Path to input ground truth JSON file (default: `data/longbenchv2/data.json`)
+- `--output`: Path to output NIAH dataset JSON file (default: `data/niah/data.json`)
+- `--blacklist`: Path to blacklist file containing instance IDs to exclude (optional)
+- `--multiplier`: Number of questions to generate per instance (default: 1)
+- `--num-secrets`: Number of secret key-value pairs to insert per instance (default: 5)
+- `--seed`: Random seed for reproducibility (default: 42)
+
+### Examples
+
+```bash
+# Basic usage with default settings
+python -m robust_ocm.adv.niah_cli
+
+# With blacklist filtering
+python -m robust_ocm.adv.niah_cli --blacklist blacklist.txt
+
+# Generate 3 questions per instance
+python -m robust_ocm.adv.niah_cli --multiplier 3
+
+# Custom input/output paths with blacklist
+python -m robust_ocm.adv.niah_cli \
+  --input data/longbenchv2/data.json \
+  --output data/niah/data.json \
+  --blacklist blacklist.txt \
+  --multiplier 2 \
+  --seed 42
+```
+
+### Output Format
+
+Each NIAH instance contains:
+- `_id`: Original instance ID
+- `domain`: "Needle in a Haystack"
+- `sub_domain`: "Secret Retrieval"
+- `questions`: List of questions (e.g., "What is the secret animal in the above context?")
+- `answers`: List of corresponding answers
+- `context`: Modified context with inserted secrets
+- `secrets`: Dictionary of all inserted key-value pairs
+- `original_question`: Original question from the source dataset
+- `original_answer`: Original answer from the source dataset
+
+### Secret Insertion Format
+
+Secrets are inserted as: `"The secret {key} is {value}."`
+
+Example: `"The secret animal is penguin."`</content>
 <parameter name="filePath">/home/jianhongtu/codes/robust_ocm/src/robust_ocm/adv/README.md

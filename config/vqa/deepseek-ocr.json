@@ -1,0 +1,15 @@
+{
+  "model_name": "deepseek-ai/DeepSeek-OCR",
+  "prompt": "{question}",
+  "max_tokens": 128,
+  "temperature": 0.0,
+  "timeout": null,
+  "extra_body": {
+    "skip_special_tokens": false,
+    "vllm_xargs": {
+      "ngram_size": 30,
+      "window_size": 90,
+      "whitelist_token_ids": [128821, 128822]
+    }
+  }
+}

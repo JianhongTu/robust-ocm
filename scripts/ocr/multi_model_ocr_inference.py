@@ -175,6 +175,9 @@ def process_image(client, image_file, image_dir, result_dir, model_name, model_c
         # Clean result for DeepSeek-OCR
         if 'deepseek' in model_name.lower() and 'ocr' in model_name.lower():
             result = clean_ocr_content(result)
+        # Clean result for Glyph (remove thinking process)
+        elif 'glyph' in model_name.lower():
+            result = clean_glyph_content(result)
 
         # Save result
         with open(output_path, "w", encoding='utf-8') as f:
@@ -224,6 +227,22 @@ def clean_ocr_content(content: str) -> str:
         content = content.replace(a_match, '')
     content = content.replace('\n\n\n\n', '\n\n').replace('\n\n\n', '\n\n').replace('<center>', '').replace('</center>', '')
     return content.strip()
+
+
+def clean_glyph_content(content: str) -> str:
+    """
+    Clean and normalize OCR output for Glyph model.
+    Removes the thinking process by keeping only content after </think> tag.
+    """
+    # Find the </think> tag and extract everything after it
+    think_tag = "</think>"
+    if think_tag in content:
+        # Get everything after </think>
+        content = content.split(think_tag, 1)[1]
+    
+    # Clean up extra whitespace
+    content = content.strip()
+    return content
 
 
 def parse_args():

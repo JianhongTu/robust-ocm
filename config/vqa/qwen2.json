@@ -1,0 +1,10 @@
+{
+  "model_name": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "prompt": "{question}",
+  "max_tokens": 128,
+  "temperature": 0.01,
+  "timeout": 1000,
+  "extra_body": {
+    "repetition_penalty": 1.05
+  }
+}

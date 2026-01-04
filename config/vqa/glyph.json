@@ -1,13 +1,12 @@
 {
-  "model_name": "google/gemma-2-27b-it",
+  "model_name": "zai-org/Glyph",
   "prompt": "You are an AI assistant specialized in converting PDF images to Markdown format. Please follow these instructions for the conversion:\n1. Text Processing:\n- Accurately recognize all text content in the PDF image without guessing or inferring.\n- Convert the recognized text into Markdown format.\n- Maintain the original document structure, including headings, paragraphs, lists, etc.\n\n2. Output Format:\n- Ensure the output Markdown document has a clear structure with appropriate line breaks between elements.\n- For complex layouts, try to maintain the original document's structure and format as closely as possible.\n\nPlease strictly follow these guidelines to ensure accuracy and consistency in the conversion. Your task is to accurately convert the content of the PDF image into Markdown format without adding any extra explanations or comments.\n",
-  "max_tokens": 4096,
+  "max_tokens": 256,
   "temperature": 1.0,
   "timeout": 1000,
   "extra_body": {
-    "top_k": 64,
-    "top_p": 0.95,
-    "min_p": 0.0,
-    "repetition_penalty": 1.0
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    }
   }
 }

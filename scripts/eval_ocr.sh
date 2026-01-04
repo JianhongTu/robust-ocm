@@ -27,9 +27,9 @@ for subdir in "$pred_base_dir"/*/; do
     # Determine the ground truth file based on subdir_name
     if [[ "$subdir_name" =~ fontsize_([0-9]+) ]]; then
         fontsize="${BASH_REMATCH[1]}"
-        gt_file="data/ocr1/adv_fontsize_${fontsize}/text_ground_truth.json"
+        gt_file="data/ocr/adv_fontsize_${fontsize}/text_ground_truth.json"
     else
-        gt_file="data/ocr1/longbenchv2_img/text_ground_truth.json"
+        gt_file="data/ocr/longbenchv2_img/text_ground_truth.json"
     fi
     
     if [ -d "$subdir" ]; then

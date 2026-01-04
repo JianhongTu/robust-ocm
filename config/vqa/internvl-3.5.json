@@ -1,0 +1,8 @@
+{
+  "model_name": "OpenGVLab/InternVL3_5-8B",
+  "prompt": "{question}",
+  "max_tokens": 64,
+  "temperature": null,
+  "timeout": 1000,
+  "extra_body": null
+}

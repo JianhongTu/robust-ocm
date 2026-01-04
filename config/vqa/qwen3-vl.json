@@ -1,0 +1,12 @@
+{
+  "model_name": "Qwen/Qwen3-VL-8B-Instruct",
+  "prompt": "{question}",
+  "max_tokens": 64,
+  "temperature": 0.7,
+  "timeout": 1000,
+  "extra_body": {
+    "top_k": 20,
+    "top_p": 0.8,
+    "repetition_penalty": 1.0
+  }
+}

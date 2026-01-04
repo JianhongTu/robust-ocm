@@ -228,3 +228,4 @@ wandb/
 # TensorBoard
 runs/
 tensorboard_logs/
+results_/
