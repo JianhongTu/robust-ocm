@@ -311,8 +311,8 @@ def parse_args():
                        help='Number of concurrent workers')
     
     parser.add_argument('--presence_penalty', type=float,
-                       default=0.0,
-                       help='Presence penalty for repetition control (0.0 to 2.0)')
+                       default=None,
+                       help='Presence penalty for repetition control (0.0 to 2.0). Overrides config file value if specified.')
     
     parser.add_argument('--case_sensitive', action='store_true',
                        help='Use case-sensitive answer matching')
@@ -512,6 +512,10 @@ if __name__ == "__main__":
         print(f"Error loading configuration: {e}")
         sys.exit(1)
     
+    # Determine presence_penalty: CLI overrides config, default to 0.0
+    presence_penalty = args.presence_penalty if args.presence_penalty is not None else model_config.get('presence_penalty', 0.0)
+    print(f"Using presence_penalty: {presence_penalty}")
+    
     # Load NIAH data from parent directory (shared across all subdirectories)
     data_json_path = os.path.join(parent_input, 'data.json')
     if not os.path.exists(data_json_path):
@@ -613,7 +617,7 @@ if __name__ == "__main__":
                     image_paths,
                     images_dir,
                     model_config,
-                    args.presence_penalty,
+                    presence_penalty,
                     args.case_sensitive
                 ): (instance_id, q_idx)
                 for instance_id, q_idx, question, answer, image_paths in all_tasks

@@ -1,7 +1,7 @@
 {
   "model_name": "baidu/Qianfan-VL-8B",
-  "prompt": "<image>请识别图中所有文字",
-  "max_tokens": 196,
+  "prompt_template": "{question}\n\n{choices}\n\nBased on the above, what is the single, most likely answer choice? Format your response as follows: The correct answer is (insert answer here).",
+  "max_tokens": 1024,
   "temperature": 0.0,
   "timeout": 1000,
   "extra_body": null

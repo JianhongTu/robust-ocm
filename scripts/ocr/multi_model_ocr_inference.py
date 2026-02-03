@@ -273,8 +273,8 @@ def parse_args():
                        help='Number of concurrent workers')
     
     parser.add_argument('--presence_penalty', type=float,
-                       default=0.0,
-                       help='Presence penalty for repetition control (0.0 to 2.0)')
+                       default=None,
+                       help='Presence penalty for repetition control (0.0 to 2.0). Overrides config file value if specified.')
     
     return parser.parse_args()
 
@@ -296,6 +296,10 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error loading configuration: {e}")
         sys.exit(1)
+    
+    # Determine presence_penalty: CLI overrides config, default to 0.0
+    presence_penalty = args.presence_penalty if args.presence_penalty is not None else model_config.get('presence_penalty', 0.0)
+    print(f"Using presence_penalty: {presence_penalty}")
 
     # Create OpenAI client
     client = OpenAI(
@@ -371,7 +375,7 @@ if __name__ == "__main__":
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         futures = {
-            executor.submit(process_image, client, image_file, image_dir, result_dir, model_name, model_config, args.presence_penalty): (image_file, subdir)
+            executor.submit(process_image, client, image_file, image_dir, result_dir, model_name, model_config, presence_penalty): (image_file, subdir)
             for image_file, image_dir, result_dir, subdir in all_tasks
         }
         

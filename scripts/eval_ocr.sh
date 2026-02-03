@@ -10,7 +10,7 @@
 #     exit 1
 # fi
 
-model_suffix="mineru"
+model_suffix="glm"
 pred_base_dir="data/pred/${model_suffix}"
 results_base="results/${model_suffix}"
 

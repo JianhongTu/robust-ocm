@@ -146,6 +146,24 @@ def format_mc_prompt(question: str, choices: Dict[str, str], prompt_template: st
         return f"{question}\n\n{choices_text}\n\n"
 
 
+def clean_thinking_tokens(model_output: str) -> str:
+    """
+    Remove thinking tokens from model output.
+    If </think> tag is present, truncate everything before and including it.
+    
+    Args:
+        model_output: The model's output string
+    
+    Returns:
+        Cleaned output string
+    """
+    if "</think>" in model_output:
+        # Find the position of </think> and truncate everything before it
+        think_end_pos = model_output.find("</think>") + len("</think>")
+        return model_output[think_end_pos:].strip()
+    return model_output
+
+
 def extract_answer(model_output: str) -> str:
     """
     Extract the answer choice (A, B, C, or D) from model output.
@@ -297,9 +315,12 @@ def process_question(
         response = client.chat.completions.create(**request_params)
         model_output = response.choices[0].message.content
         
+        # Clean thinking tokens if present
+        cleaned_output = clean_thinking_tokens(model_output)
+        
         # Extract answer and check if correct
-        extracted_answer = extract_answer(model_output)
-        is_correct = check_answer_correct(model_output, answer)
+        extracted_answer = extract_answer(cleaned_output)
+        is_correct = check_answer_correct(cleaned_output, answer)
         
         return {
             'instance_id': instance_id,
@@ -374,8 +395,8 @@ def parse_args():
                        help='Number of concurrent workers')
     
     parser.add_argument('--presence_penalty', type=float,
-                       default=0.0,
-                       help='Presence penalty for repetition control (0.0 to 2.0)')
+                       default=None,
+                       help='Presence penalty for repetition control (0.0 to 2.0). Overrides config file value if specified.')
     
     parser.add_argument('--limit', type=int,
                        default=None,
@@ -593,6 +614,10 @@ if __name__ == "__main__":
         print(f"Error loading configuration: {e}")
         sys.exit(1)
     
+    # Determine presence_penalty: CLI overrides config, default to 0.0
+    presence_penalty = args.presence_penalty if args.presence_penalty is not None else model_config.get('presence_penalty', 0.0)
+    print(f"Using presence_penalty: {presence_penalty}")
+    
     # Load MC data
     if not os.path.exists(data_json_path):
         print(f"Error: data.json not found at {data_json_path}")
@@ -730,7 +755,7 @@ if __name__ == "__main__":
                     image_paths,
                     images_dir,
                     model_config,
-                    args.presence_penalty,
+                    presence_penalty,
                     context,
                     args.text_only
                 ): instance_id
